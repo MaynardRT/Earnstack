@@ -1,0 +1,108 @@
+name: CD
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - v*
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  package-backend:
+    name: Package Backend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore backend solution
+        run: dotnet restore eTracker.sln
+
+      - name: Publish backend API
+        run: dotnet publish backend/eTracker.API/eTracker.API.csproj --configuration Release --no-restore --output backend_publish
+
+      - name: Upload backend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: etracker-backend-publish
+          path: backend_publish
+          if-no-files-found: error
+
+  package-frontend:
+    name: Package Frontend
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build frontend bundle
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL != '' && secrets.VITE_API_URL || 'http://localhost:5000/api' }}
+        run: npm run build
+
+      - name: Upload frontend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: etracker-frontend-dist
+          path: frontend/dist
+          if-no-files-found: error
+
+  release:
+    name: Create GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs:
+      - package-backend
+      - package-frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download backend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: etracker-backend-publish
+          path: release-assets/backend
+
+      - name: Download frontend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: etracker-frontend-dist
+          path: release-assets/frontend
+
+      - name: Create backend archive
+        run: tar -czf etracker-backend-${{ github.ref_name }}.tar.gz -C release-assets/backend .
+
+      - name: Create frontend archive
+        run: tar -czf etracker-frontend-${{ github.ref_name }}.tar.gz -C release-assets/frontend .
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            etracker-backend-${{ github.ref_name }}.tar.gz
+            etracker-frontend-${{ github.ref_name }}.tar.gz

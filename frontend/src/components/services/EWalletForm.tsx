@@ -4,6 +4,12 @@ import { Card } from "../common/Card";
 import { Button } from "../common/Button";
 import { Alert } from "../common/Alert";
 import { EWalletTransaction } from "../../types";
+import {
+  calculateEWalletServiceCharge,
+  calculateEWalletTotal,
+  getEWalletAmountBracket,
+  getEWalletServiceChargeRate,
+} from "../../utils/transactionCalculations";
 
 export const EWalletForm: React.FC = () => {
   const [formData, setFormData] = useState<EWalletTransaction>({
@@ -45,16 +51,6 @@ export const EWalletForm: React.FC = () => {
     }
   };
 
-  const getAmountBracket = (amount: number): string => {
-    if (amount <= 500) return "100-500";
-    if (amount <= 1000) return "501-1000";
-    if (amount <= 2000) return "1001-2000";
-    if (amount <= 3000) return "2001-3000";
-    if (amount <= 4000) return "3001-4000";
-    if (amount <= 5000) return "4001-5000";
-    return "5000+";
-  };
-
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
@@ -70,7 +66,7 @@ export const EWalletForm: React.FC = () => {
 
       // Auto-update bracket if baseAmount changes
       if (name === "baseAmount") {
-        updated.amountBracket = getAmountBracket(newValue as number);
+        updated.amountBracket = getEWalletAmountBracket(newValue as number);
       }
       return updated;
     });
@@ -108,9 +104,9 @@ export const EWalletForm: React.FC = () => {
     }
   };
 
-  const serviceChargeRate = formData.baseAmount >= 5001 ? 0.05 : 0.01;
-  const serviceCharge = formData.baseAmount * serviceChargeRate;
-  const totalAmount = formData.baseAmount + serviceCharge;
+  const serviceChargeRate = getEWalletServiceChargeRate(formData.baseAmount);
+  const serviceCharge = calculateEWalletServiceCharge(formData.baseAmount);
+  const totalAmount = calculateEWalletTotal(formData.baseAmount);
 
   return (
     <div className="p-4 sm:p-6 max-w-2xl mx-auto">
@@ -207,11 +203,12 @@ export const EWalletForm: React.FC = () => {
               required
             >
               <option value="">Select bracket</option>
-              <option value="100-500">₱0 - 500</option>
-              <option value="500-1000">₱501 - ₱1,000</option>
-              <option value="1000-5000">₱1,001 - ₱2,000</option>
-              <option value="1000-5000">₱2,001 - ₱3,000</option>
-              <option value="1000-5000">₱3,001 - ₱4,000</option>
+              <option value="100-500">₱0 - ₱500</option>
+              <option value="501-1000">₱501 - ₱1,000</option>
+              <option value="1001-2000">₱1,001 - ₱2,000</option>
+              <option value="2001-3000">₱2,001 - ₱3,000</option>
+              <option value="3001-4000">₱3,001 - ₱4,000</option>
+              <option value="4001-5000">₱4,001 - ₱5,000</option>
               <option value="5000+">₱5,000+ (5% service charge)</option>
             </select>
           </div>

@@ -4,6 +4,10 @@ import { Card } from "../common/Card";
 import { Button } from "../common/Button";
 import { Alert } from "../common/Alert";
 import { PrintingTransaction } from "../../types";
+import {
+  calculatePrintingTotal,
+  normalizePrintingQuantity,
+} from "../../utils/transactionCalculations";
 
 export const PrintingForm: React.FC = () => {
   const [formData, setFormData] = useState<PrintingTransaction>({
@@ -60,8 +64,8 @@ export const PrintingForm: React.FC = () => {
   };
 
   // Ensure quantity is always at least 1 and is a valid number
-  const validQuantity = Math.max(1, formData.quantity || 1);
-  const subtotal = (formData.baseAmount || 0) * validQuantity;
+  const validQuantity = normalizePrintingQuantity(formData.quantity);
+  const subtotal = calculatePrintingTotal(formData.baseAmount, validQuantity);
   const totalAmount = subtotal;
 
   return (
