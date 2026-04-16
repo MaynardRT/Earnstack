@@ -19,3 +19,9 @@ services:
         sync: false
       - key: JwtSettings__SecretKey
         sync: false
+      - key: Seed__AdminEmail
+        sync: false
+      - key: Seed__AdminPassword
+        sync: false
+      - key: Seed__AdminFullName
+        value: Earnstrack Administrator

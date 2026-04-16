@@ -71,6 +71,8 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+await DatabaseInitializer.InitializeAsync(app.Services);
+
 // Configure the HTTP request pipeline
 app.UseForwardedHeaders();
 

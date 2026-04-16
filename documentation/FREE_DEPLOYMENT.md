@@ -21,6 +21,8 @@ This repository is now configured for the simplest low-cost public setup:
 - Production-friendly forwarded headers handling
 - Configurable CORS origins from environment variables
 - Health endpoint at `/health`
+- Automatic EF Core database migration on startup
+- Optional initial admin bootstrap via environment variables
 
 ## Step 1: GitHub Pages Frontend
 
@@ -64,6 +66,13 @@ ConnectionStrings__DefaultConnection=YOUR_PRODUCTION_SQL_SERVER_CONNECTION_STRIN
 JwtSettings__SecretKey=YOUR_LONG_RANDOM_SECRET
 ```
 
+If you want the first deployment to create an admin account automatically, also set:
+
+```text
+Seed__AdminEmail=your-admin-email
+Seed__AdminPassword=your-strong-admin-password
+```
+
 The blueprint already sets these values for you:
 
 ```text
@@ -71,6 +80,7 @@ ASPNETCORE_ENVIRONMENT=Production
 JwtSettings__Issuer=Earnstrack
 JwtSettings__Audience=Earnstrack-users
 Cors__AllowedOrigins__0=https://maynardrt.github.io
+Seed__AdminFullName=Earnstrack Administrator
 ```
 
 ### Important CORS Note
@@ -100,6 +110,8 @@ Examples include:
 3. Your own SQL Server reachable from the internet
 
 LocalDB is not suitable for public deployment.
+
+The API now runs EF Core migrations automatically on startup, so once `ConnectionStrings__DefaultConnection` points to a reachable SQL Server database, Render can create or update the schema during deployment.
 
 ## Step 4: Verify Everything
 
