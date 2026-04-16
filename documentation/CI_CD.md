@@ -4,6 +4,8 @@ This repository now includes GitHub Actions workflows for continuous integration
 
 The delivery workflow now includes automatic frontend deployment to GitHub Pages and artifact packaging for the backend.
 
+Repository: `MaynardRT/Earnstack`
+
 ## Workflows
 
 ### CI
@@ -58,12 +60,13 @@ In the GitHub repository settings:
 
 1. Open `Settings -> Pages`
 2. Set `Source` to `GitHub Actions`
+3. Make sure the default branch is `main`
 
 The workflow deploys the frontend to:
 
-- `https://maynardrt.github.io/eTracker/`
+- `https://maynardrt.github.io/Earnstack/`
 
-This assumes the repository name remains `eTracker`.
+This assumes the repository name remains `Earnstack`.
 
 ## How To Use
 
@@ -87,6 +90,21 @@ The workflow will:
 1. Build the frontend with the repository subpath as the Vite base path.
 2. Publish the site to GitHub Pages.
 3. Generate a `404.html` fallback so client-side routes keep working.
+4. Use the `VITE_API_URL` repository secret as the production API endpoint.
+
+### Required GitHub Secret
+
+Add this repository secret before relying on the public frontend:
+
+1. Open `Settings -> Secrets and variables -> Actions`
+2. Create secret `VITE_API_URL`
+3. Set it to your deployed backend API URL, for example:
+
+```text
+https://your-backend-host.example.com/api
+```
+
+Without this secret, the built frontend will fall back to `http://localhost:5000/api`, which will not work for public GitHub Pages users.
 
 ### Create A Versioned Release
 
@@ -107,3 +125,4 @@ That will create a GitHub Release containing:
 1. The frontend is now configured to work from the GitHub Pages repository subpath.
 2. The backend is still delivered as a deployable artifact because the repository does not yet define a concrete production host for the API.
 3. If you want fully automated backend deployment to Azure, Render, Railway, IIS, or another target, the next step is to add a deployment-specific workflow and the required secrets.
+4. If you rename the GitHub repository again, the Pages URL and base path will change with the repository name.

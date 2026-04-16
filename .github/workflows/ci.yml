@@ -67,4 +67,5 @@ jobs:
       - name: Build frontend
         env:
           VITE_API_URL: http://localhost:5000/api
+          VITE_APP_BASE_PATH: /${{ github.event.repository.name }}/
         run: npm run build
