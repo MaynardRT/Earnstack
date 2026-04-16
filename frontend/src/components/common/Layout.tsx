@@ -19,7 +19,7 @@ export const Layout: React.FC<LayoutProps> = ({
   const user = useAuthStore((state) => state.user);
 
   return (
-    <div className="flex min-h-screen flex-1 flex-col bg-white transition-colors duration-200 dark:bg-gray-900">
+    <div className="flex min-h-screen flex-1 flex-col bg-white transition-colors duration-200 dark:bg-gray-900 md:min-h-0">
       {showNavigation && (
         <nav className="sticky top-0 z-50 border-b border-gray-200 bg-white shadow-sm shadow-gray-200/70 dark:border-gray-700 dark:bg-gray-800 dark:shadow-none md:border-b-0">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -61,7 +61,7 @@ export const Layout: React.FC<LayoutProps> = ({
           </div>
         </nav>
       )}
-      <main className="flex-1 overflow-y-auto overscroll-y-contain app-scroll">
+      <main className="flex-1 overflow-visible md:min-h-0 md:overflow-y-auto md:overscroll-y-contain app-scroll">
         {children}
       </main>
     </div>

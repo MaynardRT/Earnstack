@@ -29,9 +29,9 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   };
 
   return (
-    <div className="flex min-h-screen bg-white dark:bg-gray-900 md:h-screen md:overflow-hidden">
+    <div className="flex min-h-screen overflow-x-hidden bg-white dark:bg-gray-900 md:h-screen md:overflow-hidden">
       <Sidebar isOpen={sidebarOpen} onClose={handleCloseSidebar} />
-      <div className="flex min-w-0 flex-1 flex-col md:overflow-hidden">
+      <div className="flex min-w-0 flex-1 flex-col md:min-h-0 md:overflow-hidden">
         <Layout showNavigation={true} onMenuToggle={handleMenuToggle}>
           {children}
         </Layout>
