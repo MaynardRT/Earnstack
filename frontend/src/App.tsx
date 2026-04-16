@@ -65,7 +65,7 @@ function App() {
   }, [loadFromStorage]);
 
   return (
-    <Router>
+    <Router basename={import.meta.env.BASE_URL}>
       <Routes>
         {/* Auth Routes */}
         <Route path="/login" element={<BasicLoginPage />} />
@@ -127,8 +127,8 @@ function App() {
         />
 
         {/* Default route - redirect to login */}
-        <Route path="/" element={<Navigate to="/login" />} />
-        <Route path="*" element={<Navigate to="/login" />} />
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </Router>
   );

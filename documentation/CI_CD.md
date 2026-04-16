@@ -2,6 +2,8 @@
 
 This repository now includes GitHub Actions workflows for continuous integration and continuous delivery.
 
+The delivery workflow now includes automatic frontend deployment to GitHub Pages and artifact packaging for the backend.
+
 ## Workflows
 
 ### CI
@@ -32,8 +34,9 @@ It performs:
 
 1. Backend publish to a deployable folder.
 2. Frontend production build.
-3. Upload of backend and frontend build artifacts to the workflow run.
-4. Creation of a GitHub Release with packaged backend and frontend archives when a version tag such as `v1.0.0` is pushed.
+3. Automatic frontend deployment to GitHub Pages on pushes to `main` or `master`.
+4. Upload of backend and frontend build artifacts to the workflow run.
+5. Creation of a GitHub Release with packaged backend and frontend archives when a version tag such as `v1.0.0` is pushed.
 
 ## Required Repository Setup
 
@@ -49,6 +52,19 @@ Add this repository secret if your production frontend should call a deployed AP
 
 If this secret is not set, the frontend build falls back to `http://localhost:5000/api`, which is suitable for CI validation but not for production deployment.
 
+### GitHub Pages
+
+In the GitHub repository settings:
+
+1. Open `Settings -> Pages`
+2. Set `Source` to `GitHub Actions`
+
+The workflow deploys the frontend to:
+
+- `https://maynardrt.github.io/eTracker/`
+
+This assumes the repository name remains `eTracker`.
+
 ## How To Use
 
 ### Run CI
@@ -61,6 +77,16 @@ Push to `main` or `master`, then download these workflow artifacts from the Acti
 
 1. `etracker-backend-publish`
 2. `etracker-frontend-dist`
+
+### Deploy Frontend Automatically
+
+Push to `main` or `master` after enabling GitHub Pages with `GitHub Actions` as the source.
+
+The workflow will:
+
+1. Build the frontend with the repository subpath as the Vite base path.
+2. Publish the site to GitHub Pages.
+3. Generate a `404.html` fallback so client-side routes keep working.
 
 ### Create A Versioned Release
 
@@ -78,5 +104,6 @@ That will create a GitHub Release containing:
 
 ## Notes
 
-1. This setup implements artifact-based delivery because the repository does not yet define a concrete production host for the backend.
-2. If you want fully automated deployment to Azure, Render, Railway, IIS, or another target, the next step is to add a deployment-specific workflow and the required secrets.
+1. The frontend is now configured to work from the GitHub Pages repository subpath.
+2. The backend is still delivered as a deployable artifact because the repository does not yet define a concrete production host for the API.
+3. If you want fully automated backend deployment to Azure, Render, Railway, IIS, or another target, the next step is to add a deployment-specific workflow and the required secrets.

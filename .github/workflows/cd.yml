@@ -11,6 +11,12 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
 
 jobs:
   package-backend:
@@ -63,8 +69,12 @@ jobs:
 
       - name: Build frontend bundle
         env:
-          VITE_API_URL: ${{ secrets.VITE_API_URL != '' && secrets.VITE_API_URL || 'http://localhost:5000/api' }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_APP_BASE_PATH: /${{ github.event.repository.name }}/
         run: npm run build
+
+      - name: Add SPA fallback for GitHub Pages
+        run: cp dist/index.html dist/404.html
 
       - name: Upload frontend artifact
         uses: actions/upload-artifact@v4
@@ -72,6 +82,26 @@ jobs:
           name: etracker-frontend-dist
           path: frontend/dist
           if-no-files-found: error
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/dist
+
+  deploy-frontend:
+    name: Deploy Frontend To GitHub Pages
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    needs:
+      - package-frontend
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
 
   release:
     name: Create GitHub Release
