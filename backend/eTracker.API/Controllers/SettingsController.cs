@@ -152,11 +152,16 @@ public class SettingsController : ControllerBase
             .ToListAsync();
 
         var csv = new System.Text.StringBuilder();
-        csv.AppendLine("Date,Time,Type,Amount,Service Charge,Total,Status");
+        csv.AppendLine("Date,Time,Type,Amount,Service Charge,Total,Status,Failure Reason");
 
         foreach (var transaction in transactions)
         {
-            csv.AppendLine($"{transaction.CreatedAt:yyyy-MM-dd},{transaction.CreatedAt:HH:mm:ss},{transaction.TransactionType},{transaction.Amount},{transaction.ServiceCharge},{transaction.TotalAmount},{transaction.Status}");
+            var failureReason = (transaction.FailureReason ?? string.Empty)
+                .Replace("\r", " ")
+                .Replace("\n", " ")
+                .Replace(",", ";");
+
+            csv.AppendLine($"{transaction.CreatedAt:yyyy-MM-dd},{transaction.CreatedAt:HH:mm:ss},{transaction.TransactionType},{transaction.Amount},{transaction.ServiceCharge},{transaction.TotalAmount},{transaction.Status},{failureReason}");
         }
 
         var bytes = System.Text.Encoding.UTF8.GetBytes(csv.ToString());

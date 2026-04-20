@@ -8,7 +8,8 @@ public class Transaction
     public decimal Amount { get; set; }
     public decimal? ServiceCharge { get; set; }
     public decimal? TotalAmount { get; set; }
-    public string Status { get; set; } = "Completed"; // "Pending", "Completed", "Failed"
+    public string Status { get; set; } = "Pending"; // "Pending", "Completed", "Failed"
+    public string? FailureReason { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 

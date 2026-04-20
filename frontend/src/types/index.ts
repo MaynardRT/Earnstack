@@ -22,7 +22,17 @@ export interface Transaction {
   serviceCharge: number;
   totalAmount: number;
   status: "Pending" | "Completed" | "Failed";
+  failureReason?: string;
   createdAt: string;
+}
+
+export interface TransactionStatusBreakdown {
+  pendingTransactions: number;
+  completedTransactions: number;
+  failedTransactions: number;
+  pendingTotal: number;
+  completedTotal: number;
+  failedTotal: number;
 }
 
 export interface TransactionSummary {
@@ -30,6 +40,7 @@ export interface TransactionSummary {
   weeklyTotal: number;
   monthlyTotal: number;
   totalTransactions: number;
+  statusBreakdown?: TransactionStatusBreakdown | null;
 }
 
 export interface EWalletTransaction {

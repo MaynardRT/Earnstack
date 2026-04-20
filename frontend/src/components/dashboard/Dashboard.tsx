@@ -94,6 +94,45 @@ export const Dashboard: React.FC = () => {
             </button>
           ))}
         </div>
+
+        {summary?.statusBreakdown && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                Pending Transactions
+              </p>
+              <p className="text-2xl font-bold text-yellow-700 dark:text-yellow-300">
+                {summary.statusBreakdown.pendingTransactions}
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                Total amount: ₱{summary.statusBreakdown.pendingTotal.toFixed(2)}
+              </p>
+            </Card>
+            <Card>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                Completed Transactions
+              </p>
+              <p className="text-2xl font-bold text-green-700 dark:text-green-300">
+                {summary.statusBreakdown.completedTransactions}
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                Total amount: ₱
+                {summary.statusBreakdown.completedTotal.toFixed(2)}
+              </p>
+            </Card>
+            <Card>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                Failed Transactions
+              </p>
+              <p className="text-2xl font-bold text-red-700 dark:text-red-300">
+                {summary.statusBreakdown.failedTransactions}
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                Total amount: ₱{summary.statusBreakdown.failedTotal.toFixed(2)}
+              </p>
+            </Card>
+          </div>
+        )}
       </div>
 
       {/* Recent Transactions */}
@@ -169,17 +208,24 @@ export const Dashboard: React.FC = () => {
                         ₱{transaction.totalAmount.toFixed(2)}
                       </td>
                       <td className="py-3 px-4">
-                        <span
-                          className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
-                            transaction.status === "Completed"
-                              ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200"
-                              : transaction.status === "Pending"
-                                ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200"
-                                : "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200"
-                          }`}
-                        >
-                          {transaction.status}
-                        </span>
+                        <div className="flex flex-col gap-1">
+                          <span
+                            className={`inline-block px-3 py-1 rounded-full text-xs font-medium w-fit ${
+                              transaction.status === "Completed"
+                                ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200"
+                                : transaction.status === "Pending"
+                                  ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200"
+                                  : "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200"
+                            }`}
+                          >
+                            {transaction.status}
+                          </span>
+                          {transaction.failureReason && (
+                            <span className="text-xs text-red-600 dark:text-red-300 max-w-xs">
+                              {transaction.failureReason}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3 px-4 text-gray-600 dark:text-gray-400 text-sm">
                         <div className="flex flex-col leading-tight">

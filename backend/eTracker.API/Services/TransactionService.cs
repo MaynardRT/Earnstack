@@ -7,7 +7,7 @@ namespace eTracker.API.Services;
 
 public interface ITransactionService
 {
-    Task<TransactionSummaryDto> GetTransactionSummary(Guid? userId = null);
+    Task<TransactionSummaryDto> GetTransactionSummary(Guid? userId = null, bool includeStatusBreakdown = false);
     Task<List<TransactionListDto>> GetRecentTransactions(Guid? userId = null, int days = 30);
     Task<List<TransactionListDto>> GetTransactionsByPeriod(Guid? userId, string period);
     Task<TransactionListDto?> CreateEWalletTransaction(Guid userId, CreateEWalletTransactionDto dto);
@@ -25,11 +25,14 @@ public class TransactionService : ITransactionService
         _serviceFeeService = serviceFeeService;
     }
 
-    public async Task<TransactionSummaryDto> GetTransactionSummary(Guid? userId = null)
+    public async Task<TransactionSummaryDto> GetTransactionSummary(Guid? userId = null, bool includeStatusBreakdown = false)
     {
         var today = DateTime.UtcNow.Date;
-        var weekAgo = today.AddDays(-7);
-        var monthAgo = today.AddDays(-30);
+        var tomorrow = today.AddDays(1);
+        var weekStart = GetStartOfWeek(today);
+        var nextWeekStart = weekStart.AddDays(7);
+        var monthStart = GetStartOfMonth(today);
+        var nextMonthStart = monthStart.AddMonths(1);
 
         var transactionsQuery = _context.Transactions.AsQueryable();
 
@@ -39,25 +42,51 @@ public class TransactionService : ITransactionService
         }
 
         var dailyTotal = await transactionsQuery
-            .Where(t => t.CreatedAt.Date == today && t.Status == "Completed")
+            .Where(t => t.CreatedAt >= today && t.CreatedAt < tomorrow && t.Status == "Completed")
             .SumAsync(t => t.TotalAmount ?? 0);
 
         var weeklyTotal = await transactionsQuery
-            .Where(t => t.CreatedAt >= weekAgo && t.Status == "Completed")
+            .Where(t => t.CreatedAt >= weekStart && t.CreatedAt < nextWeekStart && t.Status == "Completed")
             .SumAsync(t => t.TotalAmount ?? 0);
 
         var monthlyTotal = await transactionsQuery
-            .Where(t => t.CreatedAt >= monthAgo && t.Status == "Completed")
+            .Where(t => t.CreatedAt >= monthStart && t.CreatedAt < nextMonthStart && t.Status == "Completed")
             .SumAsync(t => t.TotalAmount ?? 0);
 
         var totalTransactions = await transactionsQuery.CountAsync();
+
+        TransactionStatusBreakdownDto? statusBreakdown = null;
+
+        if (includeStatusBreakdown)
+        {
+            var groupedStatuses = await transactionsQuery
+                .GroupBy(t => t.Status)
+                .Select(g => new
+                {
+                    Status = g.Key,
+                    Count = g.Count(),
+                    Total = g.Sum(t => t.TotalAmount ?? 0)
+                })
+                .ToListAsync();
+
+            statusBreakdown = new TransactionStatusBreakdownDto
+            {
+                PendingTransactions = groupedStatuses.FirstOrDefault(g => g.Status == "Pending")?.Count ?? 0,
+                CompletedTransactions = groupedStatuses.FirstOrDefault(g => g.Status == "Completed")?.Count ?? 0,
+                FailedTransactions = groupedStatuses.FirstOrDefault(g => g.Status == "Failed")?.Count ?? 0,
+                PendingTotal = groupedStatuses.FirstOrDefault(g => g.Status == "Pending")?.Total ?? 0,
+                CompletedTotal = groupedStatuses.FirstOrDefault(g => g.Status == "Completed")?.Total ?? 0,
+                FailedTotal = groupedStatuses.FirstOrDefault(g => g.Status == "Failed")?.Total ?? 0
+            };
+        }
 
         return new TransactionSummaryDto
         {
             DailyTotal = dailyTotal,
             WeeklyTotal = weeklyTotal,
             MonthlyTotal = monthlyTotal,
-            TotalTransactions = totalTransactions
+            TotalTransactions = totalTransactions,
+            StatusBreakdown = statusBreakdown
         };
     }
 
@@ -83,6 +112,7 @@ public class TransactionService : ITransactionService
                 ServiceCharge = t.ServiceCharge ?? 0,
                 TotalAmount = t.TotalAmount ?? 0,
                 Status = t.Status,
+                FailureReason = t.FailureReason,
                 CreatedAt = t.CreatedAt
             })
             .ToListAsync();
@@ -90,16 +120,17 @@ public class TransactionService : ITransactionService
 
     public async Task<List<TransactionListDto>> GetTransactionsByPeriod(Guid? userId, string period)
     {
-        var startDate = period.ToLower() switch
+        var today = DateTime.UtcNow.Date;
+        var (startDate, endDate) = period.ToLower() switch
         {
-            "daily" => DateTime.UtcNow.Date,
-            "weekly" => DateTime.UtcNow.Date.AddDays(-7),
-            "monthly" => DateTime.UtcNow.Date.AddDays(-30),
-            _ => DateTime.UtcNow.Date.AddDays(-30)
+            "daily" => (today, today.AddDays(1)),
+            "weekly" => (GetStartOfWeek(today), GetStartOfWeek(today).AddDays(7)),
+            "monthly" => (GetStartOfMonth(today), GetStartOfMonth(today).AddMonths(1)),
+            _ => (GetStartOfMonth(today), GetStartOfMonth(today).AddMonths(1))
         };
 
         var transactionsQuery = _context.Transactions
-            .Where(t => t.CreatedAt >= startDate);
+            .Where(t => t.CreatedAt >= startDate && t.CreatedAt < endDate);
 
         if (userId.HasValue)
         {
@@ -116,6 +147,7 @@ public class TransactionService : ITransactionService
                 ServiceCharge = t.ServiceCharge ?? 0,
                 TotalAmount = t.TotalAmount ?? 0,
                 Status = t.Status,
+                FailureReason = t.FailureReason,
                 CreatedAt = t.CreatedAt
             })
             .ToListAsync();
@@ -135,34 +167,45 @@ public class TransactionService : ITransactionService
             Amount = dto.BaseAmount,
             ServiceCharge = serviceCharge,
             TotalAmount = totalAmount,
-            Status = "Completed"
-        };
-
-        var eWalletTransaction = new EWalletTransaction
-        {
-            Id = Guid.NewGuid(),
-            TransactionId = transaction.Id,
-            Provider = dto.Provider,
-            Method = dto.Method,
-            AmountBracket = dto.AmountBracket,
-            ReferenceNumber = dto.ReferenceNumber,
-            BaseAmount = dto.BaseAmount
+            Status = "Pending"
         };
 
         _context.Transactions.Add(transaction);
-        _context.EWalletTransactions.Add(eWalletTransaction);
         await _context.SaveChangesAsync();
 
-        return new TransactionListDto
+        EWalletTransaction? eWalletTransaction = null;
+
+        try
         {
-            Id = transaction.Id,
-            TransactionType = transaction.TransactionType,
-            Amount = transaction.Amount,
-            ServiceCharge = serviceCharge,
-            TotalAmount = totalAmount,
-            Status = transaction.Status,
-            CreatedAt = transaction.CreatedAt
-        };
+            eWalletTransaction = new EWalletTransaction
+            {
+                Id = Guid.NewGuid(),
+                TransactionId = transaction.Id,
+                Provider = dto.Provider,
+                Method = dto.Method,
+                AmountBracket = dto.AmountBracket,
+                ReferenceNumber = dto.ReferenceNumber,
+                BaseAmount = dto.BaseAmount
+            };
+
+            _context.EWalletTransactions.Add(eWalletTransaction);
+            transaction.Status = "Completed";
+            transaction.FailureReason = null;
+            transaction.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            if (eWalletTransaction != null)
+            {
+                _context.Entry(eWalletTransaction).State = EntityState.Detached;
+            }
+
+            await MarkTransactionAsFailedAsync(transaction, ex);
+        }
+
+        return MapTransaction(transaction);
     }
 
     public async Task<TransactionListDto?> CreatePrintingTransaction(Guid userId, CreatePrintingTransactionDto dto)
@@ -180,34 +223,100 @@ public class TransactionService : ITransactionService
             Amount = subtotal,
             ServiceCharge = serviceCharge,
             TotalAmount = totalAmount,
-            Status = "Completed"
-        };
-
-        var printingTransaction = new PrintingTransaction
-        {
-            Id = Guid.NewGuid(),
-            TransactionId = transaction.Id,
-            ServiceType = dto.ServiceType,
-            PaperSize = dto.PaperSize,
-            Color = dto.Color,
-            BaseAmount = dto.BaseAmount,
-            Quantity = quantity
+            Status = "Pending"
         };
 
         _context.Transactions.Add(transaction);
-        _context.PrintingTransactions.Add(printingTransaction);
         await _context.SaveChangesAsync();
 
+        PrintingTransaction? printingTransaction = null;
+
+        try
+        {
+            printingTransaction = new PrintingTransaction
+            {
+                Id = Guid.NewGuid(),
+                TransactionId = transaction.Id,
+                ServiceType = dto.ServiceType,
+                PaperSize = dto.PaperSize,
+                Color = dto.Color,
+                BaseAmount = dto.BaseAmount,
+                Quantity = quantity
+            };
+
+            _context.PrintingTransactions.Add(printingTransaction);
+            transaction.Status = "Completed";
+            transaction.FailureReason = null;
+            transaction.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            if (printingTransaction != null)
+            {
+                _context.Entry(printingTransaction).State = EntityState.Detached;
+            }
+
+            await MarkTransactionAsFailedAsync(transaction, ex);
+        }
+
+        return MapTransaction(transaction);
+    }
+
+    private async Task MarkTransactionAsFailedAsync(Transaction transaction, Exception exception)
+    {
+        transaction.Status = "Failed";
+        transaction.FailureReason = TruncateFailureReason(exception.InnerException?.Message ?? exception.Message);
+        transaction.UpdatedAt = DateTime.UtcNow;
+        _context.Entry(transaction).State = EntityState.Modified;
+
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch
+        {
+            // Best effort to persist the failed state when a follow-up save is still possible.
+        }
+    }
+
+    private static string TruncateFailureReason(string? message)
+    {
+        const string defaultMessage = "Transaction processing failed.";
+
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return defaultMessage;
+        }
+
+        return message.Length <= 500 ? message : message[..500];
+    }
+
+    private static TransactionListDto MapTransaction(Transaction transaction)
+    {
         return new TransactionListDto
         {
             Id = transaction.Id,
             TransactionType = transaction.TransactionType,
             Amount = transaction.Amount,
-            ServiceCharge = serviceCharge,
-            TotalAmount = totalAmount,
+            ServiceCharge = transaction.ServiceCharge ?? 0,
+            TotalAmount = transaction.TotalAmount ?? 0,
             Status = transaction.Status,
+            FailureReason = transaction.FailureReason,
             CreatedAt = transaction.CreatedAt
         };
+    }
+
+    private static DateTime GetStartOfWeek(DateTime date)
+    {
+        var offset = ((int)date.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
+        return date.AddDays(-offset);
+    }
+
+    private static DateTime GetStartOfMonth(DateTime date)
+    {
+        return new DateTime(date.Year, date.Month, 1);
     }
 
     private decimal CalculateServiceCharge(decimal baseAmount, ServiceFee? fee)

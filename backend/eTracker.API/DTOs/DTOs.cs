@@ -67,6 +67,17 @@ public class TransactionSummaryDto
     public decimal WeeklyTotal { get; set; }
     public decimal MonthlyTotal { get; set; }
     public int TotalTransactions { get; set; }
+    public TransactionStatusBreakdownDto? StatusBreakdown { get; set; }
+}
+
+public class TransactionStatusBreakdownDto
+{
+    public int PendingTransactions { get; set; }
+    public int CompletedTransactions { get; set; }
+    public int FailedTransactions { get; set; }
+    public decimal PendingTotal { get; set; }
+    public decimal CompletedTotal { get; set; }
+    public decimal FailedTotal { get; set; }
 }
 
 public class TransactionListDto
@@ -77,6 +88,7 @@ public class TransactionListDto
     public decimal ServiceCharge { get; set; }
     public decimal TotalAmount { get; set; }
     public string Status { get; set; } = string.Empty;
+    public string? FailureReason { get; set; }
     public DateTime CreatedAt { get; set; }
 }
 

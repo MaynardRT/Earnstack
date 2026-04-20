@@ -10,30 +10,92 @@ namespace eTracker.API.Tests;
 public class TransactionServiceTests
 {
     [Fact]
-    public async Task GetTransactionSummary_WithNullUserId_ReturnsAllUsersCompletedTotals()
+    public async Task GetTransactionSummary_UsesCalendarWeekStartingMondayAndCalendarMonth()
     {
         using var context = CreateContext();
         var userA = Guid.NewGuid();
         var userB = Guid.NewGuid();
+        var today = DateTime.UtcNow.Date;
+        var startOfWeek = GetStartOfWeek(today);
+        var startOfMonth = new DateTime(today.Year, today.Month, 1);
+        var lastDayBeforeWeek = startOfWeek.AddDays(-1).AddHours(12);
+        var mondayOfWeek = startOfWeek.AddHours(12);
+        var todayAtNoon = today.AddHours(12);
+
+        var monthlyOnlyDate = startOfMonth < startOfWeek
+            ? startOfMonth.AddHours(12)
+            : startOfWeek.AddDays(-2).AddHours(12);
+
+        var monthlyOnlyStatus = monthlyOnlyDate >= startOfMonth ? "Completed" : "Failed";
+        var expectedCompletedTransactions = monthlyOnlyStatus == "Completed" ? 4 : 3;
+        var expectedFailedTransactions = monthlyOnlyStatus == "Completed" ? 1 : 2;
+        var expectedCompletedTotal = monthlyOnlyStatus == "Completed" ? 575m : 485m;
+        var expectedFailedTotal = monthlyOnlyStatus == "Completed" ? 999m : 1089m;
+        var expectedMonthlyTotal = 425m;
+
+        if (monthlyOnlyStatus == "Completed")
+        {
+            expectedMonthlyTotal += 90m;
+        }
+
+        if (lastDayBeforeWeek >= startOfMonth)
+        {
+            expectedMonthlyTotal += 60m;
+        }
+
+        var expectedDailyTotal = today == startOfWeek ? 425m : 150m;
 
         context.Transactions.AddRange(
-            CreateTransaction(userA, 150m, "Completed", DateTime.UtcNow),
-            CreateTransaction(userB, 275m, "Completed", DateTime.UtcNow.AddDays(-2)),
-            CreateTransaction(userA, 999m, "Failed", DateTime.UtcNow));
+            CreateTransaction(userA, 150m, "Completed", todayAtNoon),
+            CreateTransaction(userB, 275m, "Completed", mondayOfWeek),
+            CreateTransaction(userB, 90m, monthlyOnlyStatus, monthlyOnlyDate),
+            CreateTransaction(userA, 60m, "Completed", lastDayBeforeWeek),
+            CreateTransaction(userB, 25m, "Pending", todayAtNoon),
+            CreateTransaction(userA, 999m, "Failed", todayAtNoon));
         await context.SaveChangesAsync();
 
         var service = CreateService(context);
 
-        var summary = await service.GetTransactionSummary(null);
+        var summary = await service.GetTransactionSummary(null, includeStatusBreakdown: true);
 
-        Assert.Equal(150m, summary.DailyTotal);
+        Assert.Equal(expectedDailyTotal, summary.DailyTotal);
         Assert.Equal(425m, summary.WeeklyTotal);
-        Assert.Equal(425m, summary.MonthlyTotal);
-        Assert.Equal(3, summary.TotalTransactions);
+        Assert.Equal(expectedMonthlyTotal, summary.MonthlyTotal);
+        Assert.Equal(6, summary.TotalTransactions);
+        Assert.NotNull(summary.StatusBreakdown);
+        Assert.Equal(expectedCompletedTransactions, summary.StatusBreakdown!.CompletedTransactions);
+        Assert.Equal(1, summary.StatusBreakdown.PendingTransactions);
+        Assert.Equal(expectedFailedTransactions, summary.StatusBreakdown.FailedTransactions);
+        Assert.Equal(expectedCompletedTotal, summary.StatusBreakdown.CompletedTotal);
+        Assert.Equal(25m, summary.StatusBreakdown.PendingTotal);
+        Assert.Equal(expectedFailedTotal, summary.StatusBreakdown.FailedTotal);
     }
 
     [Fact]
-    public async Task CreatePrintingTransaction_UsesSubtotalWithoutServiceCharge()
+    public async Task GetTransactionsByPeriod_Weekly_ReturnsOnlyCurrentMondayThroughSundayTransactions()
+    {
+        using var context = CreateContext();
+        var userId = Guid.NewGuid();
+        var today = DateTime.UtcNow.Date;
+        var startOfWeek = GetStartOfWeek(today);
+
+        context.Transactions.AddRange(
+            CreateTransaction(userId, 100m, "Completed", startOfWeek.AddHours(9)),
+            CreateTransaction(userId, 125m, "Completed", today.AddHours(12)),
+            CreateTransaction(userId, 200m, "Completed", startOfWeek.AddDays(-1).AddHours(18)));
+        await context.SaveChangesAsync();
+
+        var service = CreateService(context);
+
+        var transactions = await service.GetTransactionsByPeriod(userId, "weekly");
+
+        Assert.Equal(2, transactions.Count);
+        Assert.All(transactions, transaction => Assert.True(transaction.CreatedAt >= startOfWeek));
+        Assert.All(transactions, transaction => Assert.True(transaction.CreatedAt < startOfWeek.AddDays(7)));
+    }
+
+    [Fact]
+    public async Task CreatePrintingTransaction_UsesSubtotalWithoutServiceChargeAndMarksCompleted()
     {
         using var context = CreateContext();
         var service = CreateService(context);
@@ -51,6 +113,8 @@ public class TransactionServiceTests
         Assert.Equal(10m, result!.Amount);
         Assert.Equal(0m, result.ServiceCharge);
         Assert.Equal(10m, result.TotalAmount);
+        Assert.Equal("Completed", result.Status);
+        Assert.Null(result.FailureReason);
     }
 
     [Fact]
@@ -78,15 +142,62 @@ public class TransactionServiceTests
         Assert.NotNull(result);
         Assert.Equal(300m, result!.ServiceCharge);
         Assert.Equal(6300m, result.TotalAmount);
+        Assert.Equal("Completed", result.Status);
     }
 
-    private static TransactionService CreateService(ApplicationDbContext context, IServiceFeeService? serviceFeeService = null)
+    [Fact]
+    public async Task CreatePrintingTransaction_WhenFollowUpSaveFails_MarksTransactionFailedWithReason()
     {
+        using var context = CreateContext();
+        var service = CreateService(context, saveInterceptor: (_, saveCallCount) =>
+        {
+            if (saveCallCount == 2)
+            {
+                throw new InvalidOperationException("Simulated failure while finalizing transaction.");
+            }
+        });
+
+        var result = await service.CreatePrintingTransaction(Guid.NewGuid(), new CreatePrintingTransactionDto
+        {
+            ServiceType = "Printing",
+            PaperSize = "Short",
+            Color = "Grayscale",
+            BaseAmount = 2.50m,
+            Quantity = 2
+        });
+
+        Assert.NotNull(result);
+        Assert.Equal("Failed", result!.Status);
+        Assert.Equal("Simulated failure while finalizing transaction.", result.FailureReason);
+
+        var savedTransaction = await context.Transactions.SingleAsync(t => t.Id == result.Id);
+        Assert.Equal("Failed", savedTransaction.Status);
+        Assert.Equal("Simulated failure while finalizing transaction.", savedTransaction.FailureReason);
+    }
+
+    private static TransactionService CreateService(
+        ApplicationDbContext context,
+        IServiceFeeService? serviceFeeService = null,
+        Action<ApplicationDbContext, int>? saveInterceptor = null)
+    {
+        if (saveInterceptor != null)
+        {
+            context.SavingChanges += (_, _) =>
+            {
+                var saveCallCount = ++_saveCallCount;
+                saveInterceptor(context, saveCallCount);
+            };
+        }
+
         return new TransactionService(context, serviceFeeService ?? new StubServiceFeeService());
     }
 
+    private static int _saveCallCount;
+
     private static ApplicationDbContext CreateContext()
     {
+        _saveCallCount = 0;
+
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
@@ -108,6 +219,12 @@ public class TransactionServiceTests
             CreatedAt = createdAt,
             UpdatedAt = createdAt
         };
+    }
+
+    private static DateTime GetStartOfWeek(DateTime date)
+    {
+        var offset = ((int)date.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
+        return date.AddDays(-offset);
     }
 
     private sealed class StubServiceFeeService : IServiceFeeService

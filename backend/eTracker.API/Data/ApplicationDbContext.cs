@@ -12,6 +12,7 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<User> Users { get; set; }
     public DbSet<Transaction> Transactions { get; set; }
+    public DbSet<DeletedTransaction> DeletedTransactions { get; set; }
     public DbSet<EWalletTransaction> EWalletTransactions { get; set; }
     public DbSet<PrintingTransaction> PrintingTransactions { get; set; }
     public DbSet<ServiceFee> ServiceFees { get; set; }
@@ -47,6 +48,66 @@ public class ApplicationDbContext : DbContext
             .Property(t => t.TotalAmount)
             .HasPrecision(10, 2);
 
+        modelBuilder.Entity<Transaction>()
+            .Property(t => t.FailureReason)
+            .HasMaxLength(500);
+
+        modelBuilder.Entity<DeletedTransaction>()
+            .Property(t => t.Amount)
+            .HasPrecision(10, 2);
+
+        modelBuilder.Entity<DeletedTransaction>()
+            .Property(t => t.ServiceCharge)
+            .HasPrecision(10, 2);
+
+        modelBuilder.Entity<DeletedTransaction>()
+            .Property(t => t.TotalAmount)
+            .HasPrecision(10, 2);
+
+        modelBuilder.Entity<DeletedTransaction>()
+            .Property(t => t.EWalletBaseAmount)
+            .HasPrecision(10, 2);
+
+        modelBuilder.Entity<DeletedTransaction>()
+            .Property(t => t.PrintingBaseAmount)
+            .HasPrecision(10, 2);
+
+        modelBuilder.Entity<DeletedTransaction>()
+            .Property(t => t.FailureReason)
+            .HasMaxLength(500);
+
+        modelBuilder.Entity<DeletedTransaction>()
+            .Property(t => t.Provider)
+            .HasMaxLength(100);
+
+        modelBuilder.Entity<DeletedTransaction>()
+            .Property(t => t.Method)
+            .HasMaxLength(100);
+
+        modelBuilder.Entity<DeletedTransaction>()
+            .Property(t => t.AmountBracket)
+            .HasMaxLength(100);
+
+        modelBuilder.Entity<DeletedTransaction>()
+            .Property(t => t.ReferenceNumber)
+            .HasMaxLength(200);
+
+        modelBuilder.Entity<DeletedTransaction>()
+            .Property(t => t.ScreenshotUrl)
+            .HasMaxLength(500);
+
+        modelBuilder.Entity<DeletedTransaction>()
+            .Property(t => t.PrintingServiceType)
+            .HasMaxLength(100);
+
+        modelBuilder.Entity<DeletedTransaction>()
+            .Property(t => t.PaperSize)
+            .HasMaxLength(50);
+
+        modelBuilder.Entity<DeletedTransaction>()
+            .Property(t => t.Color)
+            .HasMaxLength(50);
+
         modelBuilder.Entity<ServiceFee>()
             .Property(f => f.FeePercentage)
             .HasPrecision(5, 2);
@@ -74,6 +135,22 @@ public class ApplicationDbContext : DbContext
         // Transaction Configuration
         modelBuilder.Entity<Transaction>()
             .HasKey(t => t.Id);
+
+        modelBuilder.Entity<DeletedTransaction>()
+            .HasKey(t => t.Id);
+
+        modelBuilder.Entity<DeletedTransaction>()
+            .HasIndex(t => t.OriginalTransactionId)
+            .IsUnique();
+
+        modelBuilder.Entity<DeletedTransaction>()
+            .HasIndex(t => t.UserId);
+
+        modelBuilder.Entity<DeletedTransaction>()
+            .HasIndex(t => t.OriginalCreatedAt);
+
+        modelBuilder.Entity<DeletedTransaction>()
+            .HasIndex(t => t.DeletedAt);
 
         modelBuilder.Entity<Transaction>()
             .HasOne(t => t.EWalletTransaction)

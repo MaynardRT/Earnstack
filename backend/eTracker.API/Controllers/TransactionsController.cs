@@ -27,12 +27,12 @@ public class TransactionsController : ControllerBase
     }
 
     [HttpGet("summary")]
-    public async Task<ActionResult<TransactionSummaryDto>> GetSummary()
+    public async Task<ActionResult<TransactionSummaryDto>> GetSummary([FromQuery] bool includeStatusBreakdown = false)
     {
         if (!TryGetCurrentUserId(out var userGuid))
             return Unauthorized();
 
-        var summary = await _transactionService.GetTransactionSummary(IsAdmin() ? null : userGuid);
+        var summary = await _transactionService.GetTransactionSummary(IsAdmin() ? null : userGuid, includeStatusBreakdown);
         return Ok(summary);
     }
 

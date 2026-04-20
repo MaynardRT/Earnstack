@@ -8,7 +8,9 @@ import {
 
 export const transactionService = {
   getSummary: async (): Promise<TransactionSummary> => {
-    const response = await api.get("/transactions/summary");
+    const response = await api.get("/transactions/summary", {
+      params: { includeStatusBreakdown: true },
+    });
     return response.data;
   },
 
