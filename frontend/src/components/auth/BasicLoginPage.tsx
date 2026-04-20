@@ -27,6 +27,7 @@ export const BasicLoginPage: React.FC = () => {
     }
 
     try {
+      // Login delegates all credential verification to the API; the page only persists the returned session via Zustand.
       const response = await authService.login(email, password);
 
       if (response.user && response.token) {

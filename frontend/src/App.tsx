@@ -29,6 +29,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   };
 
   return (
+    // The shell owns sidebar state so every protected page gets the same mobile/desktop navigation behavior.
     <div className="flex min-h-screen overflow-x-hidden bg-white dark:bg-gray-900 md:h-screen md:overflow-hidden">
       <Sidebar isOpen={sidebarOpen} onClose={handleCloseSidebar} />
       <div className="flex min-w-0 flex-1 flex-col md:min-h-0 md:overflow-hidden">
@@ -68,6 +69,7 @@ function App() {
   }, [loadFromStorage]);
 
   return (
+    // The router basename is driven by Vite so localhost and GitHub Pages can share one route tree.
     <Router basename={import.meta.env.BASE_URL}>
       <Routes>
         {/* Auth Routes */}

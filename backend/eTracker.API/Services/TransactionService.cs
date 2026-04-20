@@ -110,6 +110,7 @@ public class TransactionService : ITransactionService
 
         return await transactionsQuery
             .OrderByDescending(t => t.CreatedAt)
+            // The dashboard table is served from one projection so each row already contains its e-wallet or printing detail payload.
             .Select(t => new TransactionListDto
             {
                 Id = t.Id,
@@ -186,6 +187,7 @@ public class TransactionService : ITransactionService
 
         return await transactionsQuery
             .OrderByDescending(t => t.CreatedAt)
+            // Period views reuse the same enriched DTO shape as recent transactions to keep the frontend modal logic simple.
             .Select(t => new TransactionListDto
             {
                 Id = t.Id,
@@ -265,6 +267,7 @@ public class TransactionService : ITransactionService
 
         try
         {
+            // Receipt storage is resolved before marking the transaction completed so the row only points at durable screenshot locations.
             var screenshotUrl = await _receiptStorageService.SaveReceiptAsync(dto.ScreenshotBase64);
 
             eWalletTransaction = new EWalletTransaction
@@ -325,6 +328,7 @@ public class TransactionService : ITransactionService
 
         try
         {
+            // Printing transactions follow the same pending-to-completed ledger flow without a service-charge branch.
             printingTransaction = new PrintingTransaction
             {
                 Id = Guid.NewGuid(),
@@ -389,6 +393,7 @@ public class TransactionService : ITransactionService
 
     private static TransactionListDto MapTransaction(Transaction transaction)
     {
+        // Creation endpoints reuse the same DTO shape as read endpoints so the frontend can append fresh results without re-fetching.
         return new TransactionListDto
         {
             Id = transaction.Id,

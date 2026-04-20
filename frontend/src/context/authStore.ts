@@ -56,6 +56,7 @@ export const useAuthStore = create<AuthState>((set: SetState<AuthState>) => ({
   },
 
   loadFromStorage: () => {
+    // Route guards call this during app bootstrap so refreshes restore the previous session before redirects happen.
     set(getStoredAuth());
   },
 }));

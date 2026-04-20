@@ -40,6 +40,7 @@ public static class DatabaseInitializer
 
     private static async Task EnsureMigrationHistoryForExistingSchemaAsync(ApplicationDbContext dbContext, ILogger logger)
     {
+        // Some environments were bootstrapped manually before EF migration history existed, so startup first reconciles that legacy state.
         var appliedMigrations = (await dbContext.Database.GetAppliedMigrationsAsync()).ToList();
         if (appliedMigrations.Count > 0)
         {
@@ -80,6 +81,7 @@ public static class DatabaseInitializer
                 logger.LogInformation(
                     "Detected a legacy PostgreSQL schema without DeletedTransactions. Creating the archive table before baselining migrations.");
 
+                // This is the known pre-migration drift case: core tables exist, but the archive table must be created before baselining.
                 await EnsureDeletedTransactionsTableAsync(dbContext);
                 await InsertMigrationHistoryRowAsync(dbContext, InitialPostgresMigrationId, GetEfProductVersion());
                 return;
