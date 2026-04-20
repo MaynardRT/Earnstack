@@ -59,8 +59,9 @@ export const Dashboard: React.FC = () => {
     );
 
   const screenshotPreviewUrl = useEmbeddedScreenshotFallback
-    ? selectedTransaction?.screenshotDataUrl || null
-    : resolveApiAssetUrl(selectedTransaction?.screenshotUrl);
+    ? resolveApiAssetUrl(selectedTransaction?.screenshotUrl)
+    : selectedTransaction?.screenshotDataUrl ||
+      resolveApiAssetUrl(selectedTransaction?.screenshotUrl);
   const screenshotFallbackUrl = selectedTransaction?.screenshotDataUrl || null;
 
   return (
