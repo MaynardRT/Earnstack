@@ -33,7 +33,7 @@ public class TransactionService : ITransactionService
     public async Task<TransactionSummaryDto> GetTransactionSummary(Guid? userId = null, bool includeStatusBreakdown = false)
     {
         // Summary windows are calendar-based by design so dashboard totals match how operators read daily, weekly, and monthly performance.
-        var today = DateTime.UtcNow.Date;
+        var today = GetStartOfUtcDay(DateTime.UtcNow);
         var tomorrow = today.AddDays(1);
         var weekStart = GetStartOfWeek(today);
         var nextWeekStart = weekStart.AddDays(7);
@@ -168,7 +168,7 @@ public class TransactionService : ITransactionService
 
     public async Task<List<TransactionListDto>> GetTransactionsByPeriod(Guid? userId, string period)
     {
-        var today = DateTime.UtcNow.Date;
+        var today = GetStartOfUtcDay(DateTime.UtcNow);
         var (startDate, endDate) = period.ToLower() switch
         {
             "daily" => (today, today.AddDays(1)),
@@ -417,16 +417,21 @@ public class TransactionService : ITransactionService
         };
     }
 
+    private static DateTime GetStartOfUtcDay(DateTime date)
+    {
+        return new DateTime(date.Year, date.Month, date.Day, 0, 0, 0, DateTimeKind.Utc);
+    }
+
     private static DateTime GetStartOfWeek(DateTime date)
     {
         // Monday is treated as the operational week boundary across summaries and reports.
         var offset = ((int)date.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
-        return date.AddDays(-offset);
+        return GetStartOfUtcDay(date.AddDays(-offset));
     }
 
     private static DateTime GetStartOfMonth(DateTime date)
     {
-        return new DateTime(date.Year, date.Month, 1);
+        return new DateTime(date.Year, date.Month, 1, 0, 0, 0, DateTimeKind.Utc);
     }
 
     private decimal CalculateServiceCharge(decimal baseAmount, ServiceFee? fee)
