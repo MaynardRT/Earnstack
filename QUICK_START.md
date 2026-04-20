@@ -30,7 +30,7 @@ Before running the application, create your first admin user:
 
 ```bash
 # Example: run your customized local seed script
-sqlcmd -S localhost -d eTracker -i database/seed-users.local.sql
+psql "$ConnectionStrings__DefaultConnection" -f database/seed-users.local.sql
 ```
 
 Suggested local accounts:
@@ -74,7 +74,7 @@ npm run dev
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Server=YOUR_SERVER;Database=eTracker;Trusted_Connection=True;"
+    "DefaultConnection": "Host=localhost;Port=5432;Database=etracker_dev;Username=postgres;Password=postgres"
   },
   "JwtSettings": {
     "SecretKey": "replace-with-a-local-dev-secret-of-at-least-32-characters",
@@ -155,9 +155,9 @@ netstat -ano | findstr :5000
 
 ### Database Connection Failed
 
-1. Verify SQL Server is running
+1. Verify PostgreSQL is running
 2. Check connection string
-3. For SQL Server Express: `Server=.\SQLEXPRESS;`
+3. For Supabase: use the direct Postgres host, port `5432`, and require SSL
 
 ### CORS Error
 
@@ -177,7 +177,7 @@ netstat -ano | findstr :5000
 
 - **Backend:** .NET 10.0, ASP.NET Core, Entity Framework Core
 - **Frontend:** React 18, TypeScript, Vite, Zustand, Tailwind CSS
-- **Database:** SQL Server
+- **Database:** PostgreSQL / Supabase
 - **Auth:** Email/Password + JWT
 - **API:** RESTful with Swagger documentation
 
@@ -213,7 +213,7 @@ documentation/     → Guides and references
 
 ## ✅ Pre-Startup Checklist
 
-- [ ] SQL Server installed and running
+- [ ] PostgreSQL installed locally or Supabase project created
 - [ ] .NET 10.0 SDK installed
 - [ ] Node.js 18+ installed
 - [ ] appsettings.Development.json configured

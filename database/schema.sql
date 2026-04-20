@@ -1,95 +1,114 @@
--- eTracker Database Schema
--- MS SQL Server
+-- eTracker manual schema bootstrap for PostgreSQL / Supabase.
+-- Use this only when you are not letting EF Core migrations create the schema.
 
--- Create Database
-CREATE DATABASE eTracker;
-GO
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
-USE eTracker;
-GO
-
--- Users Table
-CREATE TABLE [Users] (
-    Id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
-    Email NVARCHAR(255) UNIQUE NOT NULL,
-    FullName NVARCHAR(255) NOT NULL,
-    Role NVARCHAR(50) NOT NULL CHECK (Role IN ('Admin', 'Seller')),
-    ProfilePicture NVARCHAR(MAX),
-    PasswordHash NVARCHAR(255) NOT NULL,
-    CreatedAt DATETIME DEFAULT GETUTCDATE(),
-    UpdatedAt DATETIME DEFAULT GETUTCDATE(),
-    IsActive BIT DEFAULT 1
+CREATE TABLE IF NOT EXISTS "Users" (
+    "Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    "Email" varchar(255) NOT NULL UNIQUE,
+    "FullName" varchar(255) NOT NULL,
+    "Role" varchar(50) NOT NULL,
+    "ProfilePicture" text,
+    "PasswordHash" varchar(255) NOT NULL,
+    "CreatedAt" timestamptz NOT NULL DEFAULT timezone('utc', now()),
+    "UpdatedAt" timestamptz NOT NULL DEFAULT timezone('utc', now()),
+    "IsActive" boolean NOT NULL DEFAULT true,
+    CONSTRAINT "CK_Users_Role" CHECK ("Role" IN ('Admin', 'Seller'))
 );
 
--- Service Fees Configuration Table
-CREATE TABLE [ServiceFees] (
-    Id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
-    ServiceType NVARCHAR(50) NOT NULL UNIQUE,
-    ProviderType NVARCHAR(50),
-    MethodType NVARCHAR(50),
-    FeePercentage DECIMAL(5, 2),
-    FlatFee DECIMAL(10, 2),
-    BracketMinAmount DECIMAL(10, 2),
-    BracketMaxAmount DECIMAL(10, 2),
-    CreatedAt DATETIME DEFAULT GETUTCDATE(),
-    UpdatedAt DATETIME DEFAULT GETUTCDATE()
+CREATE TABLE IF NOT EXISTS "ServiceFees" (
+    "Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    "ServiceType" varchar(50) NOT NULL,
+    "ProviderType" varchar(50),
+    "MethodType" varchar(50),
+    "FeePercentage" numeric(5, 2),
+    "FlatFee" numeric(10, 2),
+    "BracketMinAmount" numeric(10, 2),
+    "BracketMaxAmount" numeric(10, 2),
+    "CreatedAt" timestamptz NOT NULL DEFAULT timezone('utc', now()),
+    "UpdatedAt" timestamptz NOT NULL DEFAULT timezone('utc', now())
 );
 
--- Transactions Table
-CREATE TABLE [Transactions] (
-    Id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
-    UserId UNIQUEIDENTIFIER NOT NULL,
-    TransactionType NVARCHAR(50) NOT NULL CHECK (TransactionType IN ('EWallet', 'Printing')),
-    Amount DECIMAL(10, 2) NOT NULL,
-    ServiceCharge DECIMAL(10, 2),
-    TotalAmount DECIMAL(10, 2),
-    Status NVARCHAR(50) DEFAULT 'Completed' CHECK (Status IN ('Pending', 'Completed', 'Failed')),
-    CreatedAt DATETIME DEFAULT GETUTCDATE(),
-    UpdatedAt DATETIME DEFAULT GETUTCDATE(),
-    FOREIGN KEY (UserId) REFERENCES [Users](Id)
+CREATE UNIQUE INDEX IF NOT EXISTS "IX_ServiceFees_ServiceType" ON "ServiceFees" ("ServiceType");
+
+CREATE TABLE IF NOT EXISTS "Transactions" (
+    "Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    "UserId" uuid NOT NULL REFERENCES "Users"("Id") ON DELETE CASCADE,
+    "TransactionType" varchar(50) NOT NULL,
+    "Amount" numeric(10, 2) NOT NULL,
+    "ServiceCharge" numeric(10, 2),
+    "TotalAmount" numeric(10, 2),
+    "Status" varchar(50) NOT NULL DEFAULT 'Pending',
+    "FailureReason" varchar(500),
+    "CreatedAt" timestamptz NOT NULL DEFAULT timezone('utc', now()),
+    "UpdatedAt" timestamptz NOT NULL DEFAULT timezone('utc', now()),
+    CONSTRAINT "CK_Transactions_Type" CHECK ("TransactionType" IN ('EWallet', 'Printing')),
+    CONSTRAINT "CK_Transactions_Status" CHECK ("Status" IN ('Pending', 'Completed', 'Failed'))
 );
 
--- EWallet Transactions Details Table
-CREATE TABLE [EWalletTransactions] (
-    Id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
-    TransactionId UNIQUEIDENTIFIER NOT NULL FOREIGN KEY REFERENCES [Transactions](Id),
-    Provider NVARCHAR(50) NOT NULL CHECK (Provider IN ('GCash', 'Maya')),
-    Method NVARCHAR(50) NOT NULL CHECK (Method IN ('CashIn', 'CashOut')),
-    AmountBracket NVARCHAR(50),
-    ReferenceNumber NVARCHAR(100) NOT NULL,
-    ScreenshotUrl NVARCHAR(MAX),
-    BaseAmount DECIMAL(10, 2),
-    CreatedAt DATETIME DEFAULT GETUTCDATE()
+CREATE TABLE IF NOT EXISTS "EWalletTransactions" (
+    "Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    "TransactionId" uuid NOT NULL UNIQUE REFERENCES "Transactions"("Id") ON DELETE CASCADE,
+    "Provider" varchar(100) NOT NULL,
+    "Method" varchar(100) NOT NULL,
+    "AmountBracket" varchar(100),
+    "ReferenceNumber" varchar(200) NOT NULL,
+    "ScreenshotUrl" varchar(500),
+    "BaseAmount" numeric(10, 2) NOT NULL,
+    "CreatedAt" timestamptz NOT NULL DEFAULT timezone('utc', now())
 );
 
--- Printing Transactions Details Table
-CREATE TABLE [PrintingTransactions] (
-    Id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
-    TransactionId UNIQUEIDENTIFIER NOT NULL FOREIGN KEY REFERENCES [Transactions](Id),
-    ServiceType NVARCHAR(50) NOT NULL CHECK (ServiceType IN ('Printing', 'Scanning', 'Photocopy')),
-    PaperSize NVARCHAR(50) NOT NULL CHECK (PaperSize IN ('Long', 'Short')),
-    Color NVARCHAR(50) NOT NULL CHECK (Color IN ('Grayscale', 'Colored')),
-    BaseAmount DECIMAL(10, 2),
-    Quantity INT DEFAULT 1,
-    CreatedAt DATETIME DEFAULT GETUTCDATE()
+CREATE TABLE IF NOT EXISTS "PrintingTransactions" (
+    "Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    "TransactionId" uuid NOT NULL UNIQUE REFERENCES "Transactions"("Id") ON DELETE CASCADE,
+    "ServiceType" varchar(100) NOT NULL,
+    "PaperSize" varchar(50) NOT NULL,
+    "Color" varchar(50) NOT NULL,
+    "BaseAmount" numeric(10, 2) NOT NULL,
+    "Quantity" integer NOT NULL DEFAULT 1,
+    "CreatedAt" timestamptz NOT NULL DEFAULT timezone('utc', now())
 );
 
--- Audit Log Table
-CREATE TABLE [AuditLogs] (
-    Id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
-    UserId UNIQUEIDENTIFIER,
-    Action NVARCHAR(255),
-    TableName NVARCHAR(100),
-    RecordId UNIQUEIDENTIFIER,
-    OldValues NVARCHAR(MAX),
-    NewValues NVARCHAR(MAX),
-    CreatedAt DATETIME DEFAULT GETUTCDATE(),
-    FOREIGN KEY (UserId) REFERENCES [Users](Id)
+CREATE TABLE IF NOT EXISTS "DeletedTransactions" (
+    "Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    "OriginalTransactionId" uuid NOT NULL UNIQUE,
+    "UserId" uuid NOT NULL,
+    "TransactionType" text NOT NULL,
+    "Amount" numeric(10, 2) NOT NULL,
+    "ServiceCharge" numeric(10, 2),
+    "TotalAmount" numeric(10, 2),
+    "Status" text NOT NULL,
+    "FailureReason" varchar(500),
+    "OriginalCreatedAt" timestamptz NOT NULL,
+    "OriginalUpdatedAt" timestamptz NOT NULL,
+    "DeletedAt" timestamptz NOT NULL,
+    "Provider" varchar(100),
+    "Method" varchar(100),
+    "AmountBracket" varchar(100),
+    "ReferenceNumber" varchar(200),
+    "ScreenshotUrl" varchar(500),
+    "EWalletBaseAmount" numeric(10, 2),
+    "PrintingServiceType" varchar(100),
+    "PaperSize" varchar(50),
+    "Color" varchar(50),
+    "PrintingBaseAmount" numeric(10, 2),
+    "Quantity" integer
 );
 
--- Create Indexes for Performance
-CREATE INDEX IX_Transactions_UserId ON [Transactions](UserId);
-CREATE INDEX IX_Transactions_CreatedAt ON [Transactions](CreatedAt);
-CREATE INDEX IX_EWalletTransactions_TransactionId ON [EWalletTransactions](TransactionId);
-CREATE INDEX IX_PrintingTransactions_TransactionId ON [PrintingTransactions](TransactionId);
-CREATE INDEX IX_Users_Email ON [Users](Email);
+CREATE TABLE IF NOT EXISTS "AuditLogs" (
+    "Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    "UserId" uuid REFERENCES "Users"("Id") ON DELETE SET NULL,
+    "Action" text,
+    "TableName" text,
+    "RecordId" uuid,
+    "OldValues" text,
+    "NewValues" text,
+    "CreatedAt" timestamptz NOT NULL DEFAULT timezone('utc', now())
+);
+
+CREATE INDEX IF NOT EXISTS "IX_Transactions_UserId" ON "Transactions"("UserId");
+CREATE INDEX IF NOT EXISTS "IX_Transactions_CreatedAt" ON "Transactions"("CreatedAt");
+CREATE UNIQUE INDEX IF NOT EXISTS "IX_Users_Email" ON "Users"("Email");
+CREATE INDEX IF NOT EXISTS "IX_DeletedTransactions_UserId" ON "DeletedTransactions"("UserId");
+CREATE INDEX IF NOT EXISTS "IX_DeletedTransactions_OriginalCreatedAt" ON "DeletedTransactions"("OriginalCreatedAt");
+CREATE INDEX IF NOT EXISTS "IX_DeletedTransactions_DeletedAt" ON "DeletedTransactions"("DeletedAt");

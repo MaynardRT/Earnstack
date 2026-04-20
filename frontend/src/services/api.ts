@@ -33,4 +33,22 @@ api.interceptors.response.use(
   },
 );
 
+export const resolveApiAssetUrl = (
+  assetPath?: string | null,
+): string | null => {
+  if (!assetPath) {
+    return null;
+  }
+
+  if (/^(https?:)?\/\//i.test(assetPath) || assetPath.startsWith("data:")) {
+    return assetPath;
+  }
+
+  const apiOrigin = API_BASE_URL.replace(/\/api\/?$/, "");
+  const normalizedPath = assetPath.startsWith("/")
+    ? assetPath
+    : `/${assetPath}`;
+  return `${apiOrigin}${normalizedPath}`;
+};
+
 export default api;

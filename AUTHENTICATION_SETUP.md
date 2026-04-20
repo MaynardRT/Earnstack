@@ -83,7 +83,7 @@ Before the first login, you must create at least one Admin user. You have two op
 2. Run the seeding script:
 
    ```bash
-   sqlcmd -S localhost -d eTracker -i database/seed-users.local.sql
+   psql "$ConnectionStrings__DefaultConnection" -f database/seed-users.local.sql
    ```
 
 3. Create that local file from `database/seed-users.template.sql` and update it with:
@@ -92,19 +92,19 @@ Before the first login, you must create at least one Admin user. You have two op
 
 #### Option 2: Direct Admin Creation (Development)
 
-If the database is empty, manually insert an admin user using SQL:
+If the database is empty, manually insert an admin user using PostgreSQL:
 
 ```sql
-INSERT INTO Users (Id, Email, FullName, Role, PasswordHash, CreatedAt, UpdatedAt, IsActive)
+INSERT INTO "Users" ("Id", "Email", "FullName", "Role", "PasswordHash", "CreatedAt", "UpdatedAt", "IsActive")
 VALUES (
-    NEWID(),
+  gen_random_uuid(),
     'admin@example.com',
     'Admin User',
     'Admin',
     '$2a$12$YourBCryptHashHere', -- Replace with actual BCrypt hash
-    GETUTCDATE(),
-    GETUTCDATE(),
-    1
+  timezone('utc', now()),
+  timezone('utc', now()),
+  true
 );
 ```
 
@@ -113,16 +113,16 @@ VALUES (
 The `Users` table now has this structure:
 
 ```sql
-CREATE TABLE Users (
-    Id UNIQUEIDENTIFIER PRIMARY KEY,
-    Email NVARCHAR(255) UNIQUE NOT NULL,
-    FullName NVARCHAR(255) NOT NULL,
-    Role NVARCHAR(50) NOT NULL, -- 'Admin' or 'Seller'
-    ProfilePicture NVARCHAR(MAX),
-    PasswordHash NVARCHAR(MAX), -- BCrypt hashed password
-    CreatedAt DATETIME2 NOT NULL,
-    UpdatedAt DATETIME2 NOT NULL,
-    IsActive BIT NOT NULL DEFAULT 1
+CREATE TABLE "Users" (
+  "Id" uuid PRIMARY KEY,
+  "Email" varchar(255) UNIQUE NOT NULL,
+  "FullName" varchar(255) NOT NULL,
+  "Role" varchar(50) NOT NULL, -- 'Admin' or 'Seller'
+  "ProfilePicture" text,
+  "PasswordHash" text, -- BCrypt hashed password
+  "CreatedAt" timestamptz NOT NULL,
+  "UpdatedAt" timestamptz NOT NULL,
+  "IsActive" boolean NOT NULL DEFAULT true
 );
 ```
 

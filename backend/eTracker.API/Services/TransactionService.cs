@@ -18,11 +18,16 @@ public class TransactionService : ITransactionService
 {
     private readonly ApplicationDbContext _context;
     private readonly IServiceFeeService _serviceFeeService;
+    private readonly IReceiptStorageService _receiptStorageService;
 
-    public TransactionService(ApplicationDbContext context, IServiceFeeService serviceFeeService)
+    public TransactionService(
+        ApplicationDbContext context,
+        IServiceFeeService serviceFeeService,
+        IReceiptStorageService receiptStorageService)
     {
         _context = context;
         _serviceFeeService = serviceFeeService;
+        _receiptStorageService = receiptStorageService;
     }
 
     public async Task<TransactionSummaryDto> GetTransactionSummary(Guid? userId = null, bool includeStatusBreakdown = false)
@@ -119,6 +124,42 @@ public class TransactionService : ITransactionService
                     .Where(user => user.Id == t.UserId)
                     .Select(user => user.FullName)
                     .FirstOrDefault(),
+                Provider = _context.EWalletTransactions
+                    .Where(detail => detail.TransactionId == t.Id)
+                    .Select(detail => detail.Provider)
+                    .FirstOrDefault(),
+                Method = _context.EWalletTransactions
+                    .Where(detail => detail.TransactionId == t.Id)
+                    .Select(detail => detail.Method)
+                    .FirstOrDefault(),
+                AmountBracket = _context.EWalletTransactions
+                    .Where(detail => detail.TransactionId == t.Id)
+                    .Select(detail => detail.AmountBracket)
+                    .FirstOrDefault(),
+                ReferenceNumber = _context.EWalletTransactions
+                    .Where(detail => detail.TransactionId == t.Id)
+                    .Select(detail => detail.ReferenceNumber)
+                    .FirstOrDefault(),
+                ScreenshotUrl = _context.EWalletTransactions
+                    .Where(detail => detail.TransactionId == t.Id)
+                    .Select(detail => detail.ScreenshotUrl)
+                    .FirstOrDefault(),
+                PrintingServiceType = _context.PrintingTransactions
+                    .Where(detail => detail.TransactionId == t.Id)
+                    .Select(detail => detail.ServiceType)
+                    .FirstOrDefault(),
+                PaperSize = _context.PrintingTransactions
+                    .Where(detail => detail.TransactionId == t.Id)
+                    .Select(detail => detail.PaperSize)
+                    .FirstOrDefault(),
+                Color = _context.PrintingTransactions
+                    .Where(detail => detail.TransactionId == t.Id)
+                    .Select(detail => detail.Color)
+                    .FirstOrDefault(),
+                Quantity = _context.PrintingTransactions
+                    .Where(detail => detail.TransactionId == t.Id)
+                    .Select(detail => (int?)detail.Quantity)
+                    .FirstOrDefault(),
                 CreatedAt = t.CreatedAt
             })
             .ToListAsync();
@@ -158,6 +199,42 @@ public class TransactionService : ITransactionService
                     .Where(user => user.Id == t.UserId)
                     .Select(user => user.FullName)
                     .FirstOrDefault(),
+                Provider = _context.EWalletTransactions
+                    .Where(detail => detail.TransactionId == t.Id)
+                    .Select(detail => detail.Provider)
+                    .FirstOrDefault(),
+                Method = _context.EWalletTransactions
+                    .Where(detail => detail.TransactionId == t.Id)
+                    .Select(detail => detail.Method)
+                    .FirstOrDefault(),
+                AmountBracket = _context.EWalletTransactions
+                    .Where(detail => detail.TransactionId == t.Id)
+                    .Select(detail => detail.AmountBracket)
+                    .FirstOrDefault(),
+                ReferenceNumber = _context.EWalletTransactions
+                    .Where(detail => detail.TransactionId == t.Id)
+                    .Select(detail => detail.ReferenceNumber)
+                    .FirstOrDefault(),
+                ScreenshotUrl = _context.EWalletTransactions
+                    .Where(detail => detail.TransactionId == t.Id)
+                    .Select(detail => detail.ScreenshotUrl)
+                    .FirstOrDefault(),
+                PrintingServiceType = _context.PrintingTransactions
+                    .Where(detail => detail.TransactionId == t.Id)
+                    .Select(detail => detail.ServiceType)
+                    .FirstOrDefault(),
+                PaperSize = _context.PrintingTransactions
+                    .Where(detail => detail.TransactionId == t.Id)
+                    .Select(detail => detail.PaperSize)
+                    .FirstOrDefault(),
+                Color = _context.PrintingTransactions
+                    .Where(detail => detail.TransactionId == t.Id)
+                    .Select(detail => detail.Color)
+                    .FirstOrDefault(),
+                Quantity = _context.PrintingTransactions
+                    .Where(detail => detail.TransactionId == t.Id)
+                    .Select(detail => (int?)detail.Quantity)
+                    .FirstOrDefault(),
                 CreatedAt = t.CreatedAt
             })
             .ToListAsync();
@@ -188,6 +265,8 @@ public class TransactionService : ITransactionService
 
         try
         {
+            var screenshotUrl = await _receiptStorageService.SaveReceiptAsync(dto.ScreenshotBase64);
+
             eWalletTransaction = new EWalletTransaction
             {
                 Id = Guid.NewGuid(),
@@ -196,10 +275,12 @@ public class TransactionService : ITransactionService
                 Method = dto.Method,
                 AmountBracket = dto.AmountBracket,
                 ReferenceNumber = dto.ReferenceNumber,
+                ScreenshotUrl = screenshotUrl,
                 BaseAmount = dto.BaseAmount
             };
 
             _context.EWalletTransactions.Add(eWalletTransaction);
+            transaction.EWalletTransaction = eWalletTransaction;
             transaction.Status = "Completed";
             transaction.FailureReason = null;
             transaction.UpdatedAt = DateTime.UtcNow;
@@ -256,6 +337,7 @@ public class TransactionService : ITransactionService
             };
 
             _context.PrintingTransactions.Add(printingTransaction);
+            transaction.PrintingTransaction = printingTransaction;
             transaction.Status = "Completed";
             transaction.FailureReason = null;
             transaction.UpdatedAt = DateTime.UtcNow;
@@ -317,6 +399,15 @@ public class TransactionService : ITransactionService
             Status = transaction.Status,
             FailureReason = transaction.FailureReason,
             UserFullName = transaction.User?.FullName,
+            Provider = transaction.EWalletTransaction?.Provider,
+            Method = transaction.EWalletTransaction?.Method,
+            AmountBracket = transaction.EWalletTransaction?.AmountBracket,
+            ReferenceNumber = transaction.EWalletTransaction?.ReferenceNumber,
+            ScreenshotUrl = transaction.EWalletTransaction?.ScreenshotUrl,
+            PrintingServiceType = transaction.PrintingTransaction?.ServiceType,
+            PaperSize = transaction.PrintingTransaction?.PaperSize,
+            Color = transaction.PrintingTransaction?.Color,
+            Quantity = transaction.PrintingTransaction?.Quantity,
             CreatedAt = transaction.CreatedAt
         };
     }

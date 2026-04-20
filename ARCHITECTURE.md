@@ -95,7 +95,7 @@ eTracker/
 
 - **Framework**: ASP.NET Core 10.0
 - **ORM**: Entity Framework Core
-- **Database**: MS SQL Server
+- **Database**: PostgreSQL / Supabase
 - **Authentication**: JWT with password hashing (BCrypt)
 - **API Docs**: Swagger/OpenAPI
 
@@ -175,7 +175,7 @@ Frontend starts at: `http://localhost:5173`
 
 ```bash
 # Apply schema
-sqlcmd -S . -i database/schema.sql
+psql "$ConnectionStrings__DefaultConnection" -f database/schema.sql
 ```
 
 ## 📝 API Endpoints
@@ -269,8 +269,8 @@ All with proper relationships, indexes, and constraints.
 
 ### Database Setup
 
-1. Create SQL Server database
-2. Run schema.sql
+1. Create PostgreSQL database or Supabase project
+2. Run schema.sql if you are not using EF migrations
 3. Update connection strings
 
 ### JWT Configuration

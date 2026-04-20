@@ -2,9 +2,9 @@
 
 This repository now includes GitHub Actions workflows for continuous integration and continuous delivery.
 
-The delivery workflow now includes automatic frontend deployment to GitHub Pages and artifact packaging for the backend.
+The delivery workflow now matches the current hosting model: frontend deployment to GitHub Pages and backend container validation for Render.
 
-Repository: `MaynardRT/Earnstack`
+Repository: `MaynardRT/Earnstrack`
 
 ## Workflows
 
@@ -29,16 +29,14 @@ File: `.github/workflows/cd.yml`
 Runs on:
 
 1. Pushes to `main` or `master`
-2. Tags matching `v*`
-3. Manual runs via `workflow_dispatch`
+2. Manual runs via `workflow_dispatch`
 
 It performs:
 
-1. Backend publish to a deployable folder.
+1. Backend Docker image build validation using `backend/eTracker.API/Dockerfile`.
 2. Frontend production build.
 3. Automatic frontend deployment to GitHub Pages on pushes to `main` or `master`.
-4. Upload of backend and frontend build artifacts to the workflow run.
-5. Creation of a GitHub Release with packaged backend and frontend archives when a version tag such as `v1.0.0` is pushed.
+4. Upload of the Pages deployment artifact used by GitHub Pages.
 
 ## Required Repository Setup
 
@@ -64,9 +62,9 @@ In the GitHub repository settings:
 
 The workflow deploys the frontend to:
 
-- `https://maynardrt.github.io/Earnstack/`
+- `https://maynardrt.github.io/Earnstrack/`
 
-This assumes the repository name remains `Earnstack`.
+This assumes the repository name remains `Earnstrack`.
 
 ## How To Use
 
@@ -76,10 +74,7 @@ Open a pull request or push changes to `main` or `master`.
 
 ### Produce Delivery Artifacts
 
-Push to `main` or `master`, then download these workflow artifacts from the Actions run:
-
-1. `etracker-backend-publish`
-2. `etracker-frontend-dist`
+Push to `main` or `master` to validate the backend container build and publish the frontend to GitHub Pages.
 
 ### Deploy Frontend Automatically
 
@@ -106,25 +101,11 @@ https://your-backend-host.example.com/api
 
 Without this secret, the built frontend will fall back to `http://localhost:5000/api`, which will not work for public GitHub Pages users.
 
-### Create A Versioned Release
-
-Push a Git tag:
-
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-```
-
-That will create a GitHub Release containing:
-
-1. `etracker-backend-v1.0.0.tar.gz`
-2. `etracker-frontend-v1.0.0.tar.gz`
-
 ## Notes
 
 1. The frontend is now configured to work from the GitHub Pages repository subpath.
-2. The backend is still delivered as a deployable artifact because the repository does not yet define a concrete production host for the API.
-3. If you want fully automated backend deployment to Azure, Render, Railway, IIS, or another target, the next step is to add a deployment-specific workflow and the required secrets.
+2. The backend is deployed through Render using the checked-in Dockerfile rather than a GitHub release artifact.
+3. The delivery workflow validates the backend container image so pushes do not drift away from the Render runtime contract.
 4. If you rename the GitHub repository again, the Pages URL and base path will change with the repository name.
 
 For a concrete free-hosting setup using GitHub Pages plus Render, see `documentation/FREE_DEPLOYMENT.md`.

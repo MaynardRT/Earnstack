@@ -90,6 +90,15 @@ public class TransactionListDto
     public string Status { get; set; } = string.Empty;
     public string? FailureReason { get; set; }
     public string? UserFullName { get; set; }
+    public string? Provider { get; set; }
+    public string? Method { get; set; }
+    public string? AmountBracket { get; set; }
+    public string? ReferenceNumber { get; set; }
+    public string? ScreenshotUrl { get; set; }
+    public string? PrintingServiceType { get; set; }
+    public string? PaperSize { get; set; }
+    public string? Color { get; set; }
+    public int? Quantity { get; set; }
     public DateTime CreatedAt { get; set; }
 }
 

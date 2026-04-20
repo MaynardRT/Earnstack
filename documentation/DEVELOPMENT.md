@@ -7,7 +7,7 @@
 - **.NET 10.0 SDK** - [Download](https://dotnet.microsoft.com/en-us/download)
 - **Node.js 18+** - [Download](https://nodejs.org/)
 - **npm** (comes with Node.js)
-- **SQL Server** or **SQL Server Express** - [Download](https://www.microsoft.com/en-us/sql-server/sql-server-downloads)
+- **PostgreSQL 15+** - [Download](https://www.postgresql.org/download/)
 - **Visual Studio Code** or **Visual Studio 2022+**
 
 ### Backend Setup
@@ -25,7 +25,7 @@ Update the connection string in `appsettings.Development.json`:
 
 ```json
 "ConnectionStrings": {
-  "DefaultConnection": "Server=YOUR_SERVER;Database=eTracker;Trusted_Connection=True;Connection Timeout=30;"
+  "DefaultConnection": "Host=localhost;Port=5432;Database=etracker_dev;Username=postgres;Password=postgres"
 }
 ```
 
@@ -49,7 +49,7 @@ dotnet restore
 dotnet tool install --global dotnet-ef
 
 # Create migrations (if needed)
-dotnet ef migrations add InitialCreate
+dotnet ef migrations add InitialPostgres
 
 # Apply migrations
 dotnet ef database update
@@ -116,7 +116,7 @@ cd backend/eTracker.API
 dotnet ef database drop -f
 
 # Create fresh migration
-dotnet ef migrations add InitialCreate
+dotnet ef migrations add InitialPostgres
 
 # Apply migration
 dotnet ef database update
@@ -124,7 +124,7 @@ dotnet ef database update
 
 ### Check Connection String
 
-- Default: `Server=.;Database=eTracker;Trusted_Connection=True;TrustServerCertificate=True;`
+- Default: `Host=localhost;Port=5432;Database=etracker_dev;Username=postgres;Password=postgres`
 - Update `appsettings.Development.json` if needed
 
 ## Debugging
@@ -177,7 +177,7 @@ curl -X GET "http://localhost:5000/api/transactions/summary" \
 
 ### "Database connection failed"
 
-- Check SQL Server is running
+- Check PostgreSQL is running
 - Verify connection string in appsettings.json
 - Confirm database name matches
 

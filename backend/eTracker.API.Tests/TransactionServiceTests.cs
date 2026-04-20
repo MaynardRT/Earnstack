@@ -146,6 +146,26 @@ public class TransactionServiceTests
     }
 
     [Fact]
+    public async Task CreateEWalletTransaction_StoresShortReceiptUrl()
+    {
+        using var context = CreateContext();
+        var service = CreateService(context);
+
+        var result = await service.CreateEWalletTransaction(Guid.NewGuid(), new CreateEWalletTransactionDto
+        {
+            Provider = "GCash",
+            Method = "CashIn",
+            AmountBracket = "100-500",
+            ReferenceNumber = "REF-URL-001",
+            BaseAmount = 500m,
+            ScreenshotBase64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO6pL3sAAAAASUVORK5CYII="
+        });
+
+        Assert.NotNull(result);
+        Assert.Equal("/uploads/receipts/test-image.png", result!.ScreenshotUrl);
+    }
+
+    [Fact]
     public async Task CreatePrintingTransaction_WhenFollowUpSaveFails_MarksTransactionFailedWithReason()
     {
         using var context = CreateContext();
@@ -189,7 +209,10 @@ public class TransactionServiceTests
             };
         }
 
-        return new TransactionService(context, serviceFeeService ?? new StubServiceFeeService());
+        return new TransactionService(
+            context,
+            serviceFeeService ?? new StubServiceFeeService(),
+            new StubReceiptStorageService());
     }
 
     private static int _saveCallCount;
@@ -253,5 +276,18 @@ public class TransactionServiceTests
 
         public Task<bool> DeleteServiceFee(Guid id)
             => Task.FromResult(false);
+    }
+
+    private sealed class StubReceiptStorageService : IReceiptStorageService
+    {
+        public Task<string?> SaveReceiptAsync(string? screenshotBase64, CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(screenshotBase64))
+            {
+                return Task.FromResult<string?>(null);
+            }
+
+            return Task.FromResult<string?>("/uploads/receipts/test-image.png");
+        }
     }
 }

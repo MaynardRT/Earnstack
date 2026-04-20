@@ -24,6 +24,15 @@ export interface Transaction {
   status: "Pending" | "Completed" | "Failed";
   failureReason?: string;
   userFullName?: string;
+  provider?: string;
+  method?: string;
+  amountBracket?: string;
+  referenceNumber?: string;
+  screenshotUrl?: string;
+  printingServiceType?: string;
+  paperSize?: string;
+  color?: string;
+  quantity?: number;
   createdAt: string;
 }
 

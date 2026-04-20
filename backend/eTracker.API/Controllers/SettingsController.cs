@@ -147,24 +147,38 @@ public class SettingsController : ControllerBase
             return Unauthorized();
 
         var transactions = await _context.Transactions
+            .Include(t => t.EWalletTransaction)
             .Where(t => t.UserId == userGuid)
             .OrderByDescending(t => t.CreatedAt)
             .ToListAsync();
 
         var csv = new System.Text.StringBuilder();
-        csv.AppendLine("Date,Time,Type,Amount,Service Charge,Total,Status,Failure Reason");
+        csv.AppendLine("Date,Time,Type,Amount,Service Charge,Total,Status,Failure Reason,Screenshot Reference");
 
         foreach (var transaction in transactions)
         {
-            var failureReason = (transaction.FailureReason ?? string.Empty)
-                .Replace("\r", " ")
-                .Replace("\n", " ")
-                .Replace(",", ";");
+            var failureReason = EscapeCsvField(transaction.FailureReason);
+            var screenshotReference = EscapeCsvField(transaction.EWalletTransaction?.ScreenshotUrl);
 
-            csv.AppendLine($"{transaction.CreatedAt:yyyy-MM-dd},{transaction.CreatedAt:HH:mm:ss},{transaction.TransactionType},{transaction.Amount},{transaction.ServiceCharge},{transaction.TotalAmount},{transaction.Status},{failureReason}");
+            csv.AppendLine(
+                $"{transaction.CreatedAt:yyyy-MM-dd},{transaction.CreatedAt:HH:mm:ss},{EscapeCsvField(transaction.TransactionType)},{transaction.Amount},{transaction.ServiceCharge},{transaction.TotalAmount},{EscapeCsvField(transaction.Status)},{failureReason},{screenshotReference}");
         }
 
         var bytes = System.Text.Encoding.UTF8.GetBytes(csv.ToString());
         return File(bytes, "text/csv", $"transactions_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+    }
+
+    private static string EscapeCsvField(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var normalized = value
+            .Replace("\r", " ")
+            .Replace("\n", " ");
+
+        return $"\"{normalized.Replace("\"", "\"\"")}\"";
     }
 }

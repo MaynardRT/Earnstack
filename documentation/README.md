@@ -25,7 +25,7 @@ eTracker/
 │   │   ├── styles/               # Global styles
 │   │   └── App.tsx               # Root component
 │   └── public/                   # Static assets
-└── database/                     # SQL Server schema
+└── database/                     # PostgreSQL schema
     └── schema.sql                # Database initialization
 ```
 
@@ -35,7 +35,7 @@ eTracker/
 
 - **Framework**: ASP.NET Core 10.0
 - **ORM**: Entity Framework Core
-- **Database**: MS SQL Server
+- **Database**: PostgreSQL / Supabase
 - **Authentication**: JWT + email/password
 - **API Documentation**: Swagger/OpenAPI
 
@@ -90,8 +90,8 @@ eTracker/
 ### Prerequisites
 
 - Node.js 18+ (Frontend)
-- .NET 8 SDK (Backend)
-- MS SQL Server 2019+
+- .NET 10 SDK (Backend)
+- PostgreSQL 15+ or Supabase
 
 ### Backend Setup
 
@@ -112,7 +112,7 @@ eTracker/
    ```json
    {
      "ConnectionStrings": {
-       "DefaultConnection": "Server=YOUR_SERVER;Database=eTracker;Trusted_Connection=True;"
+       "DefaultConnection": "Host=localhost;Port=5432;Database=etracker_dev;Username=postgres;Password=postgres"
      }
    }
    ```

@@ -47,12 +47,12 @@ Create local users with BCrypt password hashes using `database/seed-users.templa
 
 ### Connection Strings
 
-#### SQL Server (Windows Authentication)
+#### PostgreSQL / Supabase
 
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost;Database=eTracker;Trusted_Connection=True;Connection Timeout=30;"
+    "DefaultConnection": "Host=localhost;Port=5432;Database=etracker;Username=postgres;Password=postgres"
   }
 }
 ```
@@ -62,7 +62,17 @@ For development environment (`appsettings.Development.json`):
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=eTracker;Trusted_Connection=True;TrustServerCertificate=True;"
+    "DefaultConnection": "Host=localhost;Port=5432;Database=etracker_dev;Username=postgres;Password=postgres"
+  }
+}
+```
+
+For Supabase production:
+
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=YOUR_SUPABASE_HOST;Port=5432;Database=postgres;Username=postgres;Password=YOUR_SUPABASE_PASSWORD;SSL Mode=Require;Trust Server Certificate=true;"
   }
 }
 ```
@@ -96,7 +106,7 @@ VITE_API_URL=https://your-production-api.com/api
 
 ## Database Setup
 
-1. Create the database using the schema in `database/schema.sql`
+1. Create the database or Supabase project
 2. Update connection strings in both backend and Entity Framework configuration
 3. Run Entity Framework migrations if needed
 
@@ -124,5 +134,5 @@ Update configuration files with production values and deploy accordingly.
 2. **HTTPS**: Always use HTTPS in production
 3. **CORS**: Configure CORS appropriately for your domain
 4. **OAuth Secrets**: Never commit secrets to repository
-5. **Database**: Use strong, complex passwords
+5. **Database**: Use strong, complex passwords and keep Supabase connection strings secret
 6. **Token Expiration**: Set appropriate token expiration times

@@ -37,7 +37,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 
 // Add DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Add JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
@@ -66,6 +66,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<ITransactionRetentionService, TransactionRetentionService>();
 builder.Services.AddScoped<IServiceFeeService, ServiceFeeService>();
+builder.Services.AddScoped<IReceiptStorageService, LocalReceiptStorageService>();
 builder.Services.AddHostedService<TransactionRetentionHostedService>();
 builder.Services.AddHttpClient();
 
@@ -80,6 +81,7 @@ await DatabaseInitializer.InitializeAsync(app.Services);
 
 // Configure the HTTP request pipeline
 app.UseForwardedHeaders();
+app.UseStaticFiles();
 
 // CORS MUST come before HTTPS redirect in development
 app.UseCors("AllowReactApp");

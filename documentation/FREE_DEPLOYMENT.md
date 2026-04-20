@@ -4,7 +4,7 @@ This repository is now configured for the simplest low-cost public setup:
 
 1. Frontend on GitHub Pages
 2. Backend on Render
-3. Database on an external SQL Server-compatible host that you provide
+3. Database on Supabase Postgres
 
 ## What Is Already Configured In The Repo
 
@@ -26,7 +26,7 @@ This repository is now configured for the simplest low-cost public setup:
 
 ## Step 1: GitHub Pages Frontend
 
-In GitHub for `MaynardRT/Earnstack`:
+In GitHub for `MaynardRT/Earnstrack`:
 
 1. Open `Settings -> Pages`
 2. Set `Source` to `GitHub Actions`
@@ -36,13 +36,13 @@ In GitHub for `MaynardRT/Earnstack`:
 Set `VITE_API_URL` to your deployed backend URL including `/api`, for example:
 
 ```text
-https://earnstack-api.onrender.com/api
+https://earnstrack-api.onrender.com/api
 ```
 
 Your frontend site URL will be:
 
 ```text
-https://maynardrt.github.io/Earnstack/
+https://maynardrt.github.io/Earnstrack/
 ```
 
 ## Step 2: Render Backend
@@ -53,7 +53,7 @@ Render can read the `render.yaml` file in the repository.
 
 1. Create a new account or sign in
 2. Choose `New +` -> `Blueprint`
-3. Connect the `MaynardRT/Earnstack` repository
+3. Connect the `MaynardRT/Earnstrack` repository
 4. Let Render detect `render.yaml`
 5. Create the service
 
@@ -62,7 +62,7 @@ Render can read the `render.yaml` file in the repository.
 You must fill these values in Render before the API can work:
 
 ```text
-ConnectionStrings__DefaultConnection=YOUR_PRODUCTION_SQL_SERVER_CONNECTION_STRING
+ConnectionStrings__DefaultConnection=Host=YOUR_SUPABASE_HOST;Port=5432;Database=postgres;Username=postgres;Password=YOUR_SUPABASE_PASSWORD;SSL Mode=Require;Trust Server Certificate=true;
 JwtSettings__SecretKey=YOUR_LONG_RANDOM_SECRET
 ```
 
@@ -91,27 +91,19 @@ GitHub Pages runs under the origin:
 https://maynardrt.github.io
 ```
 
-That is why the backend CORS origin must be that domain, not the full `/Earnstack/` URL.
+That is why the backend CORS origin must be that domain, not the full `/Earnstrack/` URL.
 
-## Step 3: Production Database
+## Step 3: Supabase Database
 
-This backend still uses SQL Server.
+Create a Supabase project and use the Postgres connection string from `Project Settings -> Database`.
 
-That means you need a production SQL Server connection string for:
+Use the direct connection string for:
 
 ```text
 ConnectionStrings__DefaultConnection
 ```
 
-Examples include:
-
-1. Azure SQL
-2. A hosted SQL Server instance
-3. Your own SQL Server reachable from the internet
-
-LocalDB is not suitable for public deployment.
-
-The API now runs EF Core migrations automatically on startup, so once `ConnectionStrings__DefaultConnection` points to a reachable SQL Server database, Render can create or update the schema during deployment.
+Supabase requires SSL in production. The API runs EF Core migrations automatically on startup, so once `ConnectionStrings__DefaultConnection` points to a reachable Supabase database, Render can create or update the schema during deployment.
 
 ## Step 4: Verify Everything
 
@@ -120,7 +112,7 @@ The API now runs EF Core migrations automatically on startup, so once `Connectio
 Open:
 
 ```text
-https://github.com/MaynardRT/Earnstack/actions
+https://github.com/MaynardRT/Earnstrack/actions
 ```
 
 Look for a successful `CD` run with successful `package-frontend` and `deploy-frontend` jobs.
@@ -140,13 +132,13 @@ It should return a JSON payload with `status` set to `ok`.
 Frontend:
 
 ```text
-https://maynardrt.github.io/Earnstack/
+https://maynardrt.github.io/Earnstrack/
 ```
 
 Backend example:
 
 ```text
-https://earnstack-api.onrender.com/api
+https://earnstrack-api.onrender.com/api
 ```
 
 ## Remaining Manual Work
@@ -156,4 +148,4 @@ These cannot be completed from inside the repository alone:
 1. Enabling GitHub Pages in repository settings
 2. Adding GitHub repository secrets
 3. Creating the Render service from the repository
-4. Providing a production SQL Server connection string
+4. Providing a production Supabase connection string

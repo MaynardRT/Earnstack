@@ -3,12 +3,15 @@ import { transactionService } from "../../services/transactionService";
 import { Transaction, TransactionSummary } from "../../types";
 import { Card, StatCard } from "../common/Card";
 import { Alert } from "../common/Alert";
+import { Modal } from "../common/Modal";
+import { resolveApiAssetUrl } from "../../services/api";
 import {
   Banknote,
   TrendingUp,
   Calendar,
   ArrowUpRight,
   ArrowDownLeft,
+  Eye,
 } from "lucide-react";
 
 export const Dashboard: React.FC = () => {
@@ -17,6 +20,8 @@ export const Dashboard: React.FC = () => {
   const [period, setPeriod] = useState<"daily" | "weekly" | "monthly">("daily");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedTransaction, setSelectedTransaction] =
+    useState<Transaction | null>(null);
 
   useEffect(() => {
     loadData();
@@ -50,6 +55,10 @@ export const Dashboard: React.FC = () => {
         Loading...
       </div>
     );
+
+  const screenshotPreviewUrl = resolveApiAssetUrl(
+    selectedTransaction?.screenshotUrl,
+  );
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
@@ -167,6 +176,9 @@ export const Dashboard: React.FC = () => {
                     Status
                   </th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">
+                    Details
+                  </th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">
                     Date & Time
                   </th>
                 </tr>
@@ -175,7 +187,7 @@ export const Dashboard: React.FC = () => {
                 {transactions.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={8}
                       className="text-center py-8 text-gray-500 dark:text-gray-400"
                     >
                       No transactions yet
@@ -235,6 +247,16 @@ export const Dashboard: React.FC = () => {
                           )}
                         </div>
                       </td>
+                      <td className="py-3 px-4">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedTransaction(transaction)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-blue-200 px-3 py-1.5 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-50 dark:border-blue-500/40 dark:text-blue-300 dark:hover:bg-blue-500/10"
+                        >
+                          <Eye size={16} />
+                          View details
+                        </button>
+                      </td>
                       <td className="py-3 px-4 text-gray-600 dark:text-gray-400 text-sm">
                         <div className="flex flex-col leading-tight">
                           <span>
@@ -262,6 +284,143 @@ export const Dashboard: React.FC = () => {
           </div>
         </Card>
       </div>
+
+      <Modal
+        title="Transaction Details"
+        isOpen={selectedTransaction !== null}
+        onClose={() => setSelectedTransaction(null)}
+      >
+        {selectedTransaction && (
+          <div className="space-y-6">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <DetailItem
+                label="Recorded By"
+                value={selectedTransaction.userFullName || "Unknown user"}
+              />
+              <DetailItem
+                label="Transaction Type"
+                value={selectedTransaction.transactionType}
+              />
+              <DetailItem
+                label="Amount"
+                value={`₱${selectedTransaction.amount.toFixed(2)}`}
+              />
+              <DetailItem
+                label="Service Charge"
+                value={`₱${selectedTransaction.serviceCharge.toFixed(2)}`}
+              />
+              <DetailItem
+                label="Total"
+                value={`₱${selectedTransaction.totalAmount.toFixed(2)}`}
+              />
+              <DetailItem label="Status" value={selectedTransaction.status} />
+              <DetailItem
+                label="Created At"
+                value={new Date(selectedTransaction.createdAt).toLocaleString()}
+              />
+              <DetailItem
+                label="Failure Reason"
+                value={selectedTransaction.failureReason || "None"}
+              />
+            </div>
+
+            {selectedTransaction.transactionType === "EWallet" ? (
+              <div className="space-y-4 rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+                <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  E-Wallet Details
+                </h4>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <DetailItem
+                    label="Provider"
+                    value={selectedTransaction.provider || "Unknown"}
+                  />
+                  <DetailItem
+                    label="Method"
+                    value={selectedTransaction.method || "Unknown"}
+                  />
+                  <DetailItem
+                    label="Amount Bracket"
+                    value={selectedTransaction.amountBracket || "None"}
+                  />
+                  <DetailItem
+                    label="Reference Number"
+                    value={selectedTransaction.referenceNumber || "None"}
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Screenshot Reference
+                  </p>
+                  {screenshotPreviewUrl ? (
+                    <div className="space-y-3">
+                      <img
+                        src={screenshotPreviewUrl}
+                        alt="Transaction screenshot reference"
+                        className="max-h-[28rem] w-full rounded-xl border border-gray-200 object-contain dark:border-gray-700"
+                      />
+                      <a
+                        href={screenshotPreviewUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-200"
+                      >
+                        Open screenshot in new tab
+                      </a>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      No screenshot was attached to this transaction.
+                    </p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4 rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+                <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Printing Details
+                </h4>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <DetailItem
+                    label="Service Type"
+                    value={selectedTransaction.printingServiceType || "Unknown"}
+                  />
+                  <DetailItem
+                    label="Paper Size"
+                    value={selectedTransaction.paperSize || "Unknown"}
+                  />
+                  <DetailItem
+                    label="Color"
+                    value={selectedTransaction.color || "Unknown"}
+                  />
+                  <DetailItem
+                    label="Quantity"
+                    value={`${selectedTransaction.quantity ?? 0}`}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
+    </div>
+  );
+};
+
+interface DetailItemProps {
+  label: string;
+  value: string;
+}
+
+const DetailItem: React.FC<DetailItemProps> = ({ label, value }) => {
+  return (
+    <div className="rounded-xl bg-gray-50 p-4 dark:bg-gray-900/40">
+      <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+        {label}
+      </p>
+      <p className="mt-2 break-words text-sm font-medium text-gray-900 dark:text-white">
+        {value}
+      </p>
     </div>
   );
 };

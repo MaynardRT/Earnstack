@@ -1,10 +1,10 @@
 services:
   - type: web
-    name: earnstack-api
-    runtime: dotnet
+    name: earnstrack-api
+    runtime: docker
     plan: free
-    buildCommand: dotnet publish backend/eTracker.API/eTracker.API.csproj -c Release -o out
-    startCommand: dotnet out/eTracker.API.dll --urls http://0.0.0.0:$PORT
+    dockerfilePath: ./backend/eTracker.API/Dockerfile
+    dockerContext: ./backend/eTracker.API
     healthCheckPath: /health
     envVars:
       - key: ASPNETCORE_ENVIRONMENT

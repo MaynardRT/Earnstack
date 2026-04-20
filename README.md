@@ -30,7 +30,7 @@ Use the template in `database/seed-users.template.sql` to create local accounts 
 
 - .NET 10.0 SDK
 - Node.js 18+ and npm
-- SQL Server (or configure SQLite/PostgreSQL)
+- PostgreSQL 15+ or a Supabase Postgres instance
 
 ### Backend Setup
 
@@ -73,7 +73,7 @@ The frontend will be available at `http://localhost:5173`
 - **Controllers**: API endpoints for Auth, Transactions, and Settings
 - **Services**: Business logic for authentication, transactions, and service fees
 - **Models**: Entity models for User, Transaction, EWalletTransaction, PrintingTransaction, ServiceFee, and AuditLog
-- **Data**: Entity Framework Core DbContext with SQL Server support
+- **Data**: Entity Framework Core DbContext with PostgreSQL support
 - **DTOs**: Request/response data transfer objects
 
 ### Frontend (React + TypeScript)
@@ -187,7 +187,7 @@ npm run build
 
 ### Database Connection Issues
 
-- Verify SQL Server is running
+- Verify PostgreSQL is running or Supabase credentials are correct
 - Check connection string in `appsettings.json`
 - Ensure database user has proper permissions
 
