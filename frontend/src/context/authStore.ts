@@ -1,13 +1,32 @@
 import { create, SetState } from "zustand";
 import { User } from "../types";
 
+const LAST_ACTIVITY_KEY = "lastActivityAt";
+const IDLE_TIMEOUT_MS = 60 * 60 * 1000;
+
 const getStoredAuth = () => {
   try {
     // Storage recovery is defensive because malformed local data should never break app bootstrap.
     const storedUser = localStorage.getItem("user");
     const storedToken = localStorage.getItem("authToken");
+    const storedLastActivity = localStorage.getItem(LAST_ACTIVITY_KEY);
 
     if (!storedUser || !storedToken) {
+      return { user: null, token: null, isAuthenticated: false };
+    }
+
+    const now = Date.now();
+    const lastActivity = storedLastActivity
+      ? Number.parseInt(storedLastActivity, 10)
+      : now;
+
+    if (
+      !Number.isFinite(lastActivity) ||
+      now - lastActivity > IDLE_TIMEOUT_MS
+    ) {
+      localStorage.removeItem("user");
+      localStorage.removeItem("authToken");
+      localStorage.removeItem(LAST_ACTIVITY_KEY);
       return { user: null, token: null, isAuthenticated: false };
     }
 
@@ -19,6 +38,7 @@ const getStoredAuth = () => {
   } catch {
     localStorage.removeItem("user");
     localStorage.removeItem("authToken");
+    localStorage.removeItem(LAST_ACTIVITY_KEY);
 
     return { user: null, token: null, isAuthenticated: false };
   }
@@ -41,6 +61,7 @@ export const useAuthStore = create<AuthState>((set: SetState<AuthState>) => ({
     // Persist first, then publish state, so reload behavior matches the in-memory session immediately.
     localStorage.setItem("user", JSON.stringify(user));
     localStorage.setItem("authToken", token);
+    localStorage.setItem(LAST_ACTIVITY_KEY, Date.now().toString());
     set({ user, token, isAuthenticated: true });
   },
 
@@ -52,6 +73,7 @@ export const useAuthStore = create<AuthState>((set: SetState<AuthState>) => ({
   clearAuth: () => {
     localStorage.removeItem("user");
     localStorage.removeItem("authToken");
+    localStorage.removeItem(LAST_ACTIVITY_KEY);
     set({ user: null, token: null, isAuthenticated: false });
   },
 

@@ -533,27 +533,13 @@ public class TransactionService : ITransactionService
             return CalculateServiceCharge(baseAmount, fee);
         }
 
-        if (baseAmount <= 500)
+        if (baseAmount <= 0)
         {
-            return 5m;
+            return 0m;
         }
 
-        if (baseAmount <= 1500)
-        {
-            return 10m;
-        }
-
-        if (baseAmount <= 2500)
-        {
-            return 15m;
-        }
-
-        if (baseAmount <= 3000)
-        {
-            return 20m;
-        }
-
-        var thousandBandsAboveThreeThousand = (int)Math.Ceiling((baseAmount - 3000m) / 1000m);
-        return thousandBandsAboveThreeThousand * 50m;
+        var normalizedAmount = Math.Min(baseAmount, 10000m);
+        var fiveHundredBands = (int)Math.Ceiling(normalizedAmount / 500m);
+        return fiveHundredBands * 5m;
     }
 }

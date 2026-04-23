@@ -8,30 +8,28 @@ import {
 } from "./transactionCalculations";
 
 describe("transactionCalculations", () => {
-  it("uses fixed fee tiers through 3000 and 50 per 1000-band above 3000", () => {
+  it("uses 500-step fee brackets based on the e-wallet rate card", () => {
     expect(calculateEWalletServiceCharge(500)).toBe(5);
     expect(calculateEWalletServiceCharge(501)).toBe(10);
-    expect(calculateEWalletServiceCharge(1500)).toBe(10);
-    expect(calculateEWalletServiceCharge(1501)).toBe(15);
-    expect(calculateEWalletServiceCharge(2500)).toBe(15);
-    expect(calculateEWalletServiceCharge(2501)).toBe(20);
-    expect(calculateEWalletServiceCharge(3000)).toBe(20);
-    expect(calculateEWalletServiceCharge(3001)).toBe(50);
-    expect(calculateEWalletServiceCharge(4000)).toBe(50);
-    expect(calculateEWalletServiceCharge(4001)).toBe(100);
-    expect(calculateEWalletServiceCharge(5000)).toBe(100);
-    expect(calculateEWalletServiceCharge(5001)).toBe(150);
-    expect(calculateEWalletTotal(5001)).toBe(5151);
+    expect(calculateEWalletServiceCharge(1000)).toBe(10);
+    expect(calculateEWalletServiceCharge(1001)).toBe(15);
+    expect(calculateEWalletServiceCharge(1500)).toBe(15);
+    expect(calculateEWalletServiceCharge(1501)).toBe(20);
+    expect(calculateEWalletServiceCharge(9500)).toBe(95);
+    expect(calculateEWalletServiceCharge(9501)).toBe(100);
+    expect(calculateEWalletServiceCharge(10000)).toBe(100);
+    expect(calculateEWalletServiceCharge(10001)).toBe(100);
+    expect(calculateEWalletTotal(10000)).toBe(10100);
   });
 
   it("returns the current amount brackets used by the form", () => {
-    expect(getEWalletAmountBracket(500)).toBe("0-500");
-    expect(getEWalletAmountBracket(1000)).toBe("501-1500");
-    expect(getEWalletAmountBracket(1500)).toBe("501-1500");
-    expect(getEWalletAmountBracket(1501)).toBe("1501-2500");
-    expect(getEWalletAmountBracket(2501)).toBe("2501-3000");
-    expect(getEWalletAmountBracket(3500)).toBe("3001-4000");
-    expect(getEWalletAmountBracket(5001)).toBe("5001+");
+    expect(getEWalletAmountBracket(500)).toBe("1-500");
+    expect(getEWalletAmountBracket(1000)).toBe("501-1000");
+    expect(getEWalletAmountBracket(1500)).toBe("1001-1500");
+    expect(getEWalletAmountBracket(1501)).toBe("1501-2000");
+    expect(getEWalletAmountBracket(3500)).toBe("3001-3500");
+    expect(getEWalletAmountBracket(10000)).toBe("9501-10000");
+    expect(getEWalletAmountBracket(10001)).toBe("9501-10000");
   });
 
   it("keeps printing totals as unit price times quantity with a minimum quantity of one", () => {

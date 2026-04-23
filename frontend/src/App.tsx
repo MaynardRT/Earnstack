@@ -16,6 +16,9 @@ import { PrintingForm } from "./components/services/PrintingForm";
 import { ProductsPage } from "./components/services/ProductsPage";
 import { SettingsPage } from "./components/settings/SettingsPage";
 
+const LAST_ACTIVITY_KEY = "lastActivityAt";
+const IDLE_TIMEOUT_MS = 60 * 60 * 1000;
+
 // Main Layout with Sidebar
 const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -57,6 +60,8 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
 function App() {
   const { isDarkMode } = useThemeStore();
   const loadFromStorage = useAuthStore((state) => state.loadFromStorage);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const clearAuth = useAuthStore((state) => state.clearAuth);
 
   useEffect(() => {
     // Theme is applied at the document root so Tailwind dark variants work across the entire app shell.
@@ -67,6 +72,66 @@ function App() {
     // Auth hydration happens once on boot to avoid a flash of logged-out routing after refresh.
     loadFromStorage();
   }, [loadFromStorage]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    const updateLastActivity = () => {
+      localStorage.setItem(LAST_ACTIVITY_KEY, Date.now().toString());
+    };
+
+    const enforceIdleTimeout = () => {
+      const raw = localStorage.getItem(LAST_ACTIVITY_KEY);
+      const lastActivity = raw ? Number.parseInt(raw, 10) : Date.now();
+
+      if (!Number.isFinite(lastActivity)) {
+        updateLastActivity();
+        return;
+      }
+
+      if (Date.now() - lastActivity > IDLE_TIMEOUT_MS) {
+        clearAuth();
+      }
+    };
+
+    const handleUserActivity = () => {
+      updateLastActivity();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        enforceIdleTimeout();
+      }
+    };
+
+    updateLastActivity();
+
+    const events: Array<keyof WindowEventMap> = [
+      "mousemove",
+      "keydown",
+      "click",
+      "scroll",
+      "touchstart",
+      "focus",
+    ];
+
+    events.forEach((eventName) =>
+      window.addEventListener(eventName, handleUserActivity, { passive: true }),
+    );
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    const intervalId = window.setInterval(enforceIdleTimeout, 60 * 1000);
+
+    return () => {
+      events.forEach((eventName) =>
+        window.removeEventListener(eventName, handleUserActivity),
+      );
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.clearInterval(intervalId);
+    };
+  }, [clearAuth, isAuthenticated]);
 
   return (
     // The router basename is driven by Vite so localhost and GitHub Pages can share one route tree.

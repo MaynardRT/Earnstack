@@ -10,6 +10,18 @@ import {
   getEWalletAmountBracket,
 } from "../../utils/transactionCalculations";
 
+const EWALLET_BRACKETS = Array.from({ length: 20 }, (_, index) => {
+  const min = index * 500 + 1;
+  const max = min + 499;
+  const fee = (index + 1) * 5;
+
+  return {
+    value: `${min}-${max}`,
+    label: `P${min.toLocaleString()} - P${max.toLocaleString()}`,
+    fee,
+  };
+});
+
 export const EWalletForm: React.FC = () => {
   const [formData, setFormData] = useState<EWalletTransaction>({
     provider: "GCash",
@@ -105,6 +117,10 @@ export const EWalletForm: React.FC = () => {
 
   const serviceCharge = calculateEWalletServiceCharge(formData.baseAmount);
   const totalAmount = calculateEWalletTotal(formData.baseAmount);
+  const activeBracketValue =
+    formData.baseAmount > 0
+      ? getEWalletAmountBracket(formData.baseAmount)
+      : formData.amountBracket;
 
   return (
     <div className="p-4 sm:p-6 max-w-2xl mx-auto">
@@ -201,29 +217,45 @@ export const EWalletForm: React.FC = () => {
               required
             >
               <option value="">Select bracket</option>
-              <option value="0-500">₱0 - ₱500</option>
-              <option value="501-1500">₱501 - ₱1,500</option>
-              <option value="1501-2500">₱1,501 - ₱2,500</option>
-              <option value="2501-3000">₱2,501 - ₱3,000</option>
-              <option value="3001-4000">₱3,001 - ₱4,000</option>
-              <option value="4001-5000">₱4,001 - ₱5,000</option>
-              <option value="5001+">
-                ₱5,001+ (add ₱50 per ₱1,000 band above ₱3,000)
-              </option>
+              {EWALLET_BRACKETS.map((bracket) => (
+                <option key={bracket.value} value={bracket.value}>
+                  {bracket.label}
+                </option>
+              ))}
             </select>
           </div>
 
           <div className="rounded-lg border border-blue-200 bg-blue-50/70 p-4 dark:border-blue-800 dark:bg-blue-900/20">
             <p className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-2">
-              Service Fee Guide
+              Service Fee Table
             </p>
-            <ul className="text-sm text-blue-900 dark:text-blue-200 space-y-1">
-              <li>₱0 - ₱500: ₱5.00</li>
-              <li>₱501 - ₱1,500: ₱10.00</li>
-              <li>₱1,501 - ₱2,500: ₱15.00</li>
-              <li>₱2,501 - ₱3,000: ₱20.00</li>
-              <li>₱3,001 and up: add ₱50 per ₱1,000 band above ₱3,000</li>
-            </ul>
+            <div className="overflow-hidden rounded-lg border border-blue-200 dark:border-blue-700">
+              <table className="min-w-full text-sm text-blue-900 dark:text-blue-200">
+                <thead className="bg-blue-100 dark:bg-blue-900/60">
+                  <tr>
+                    <th className="px-3 py-2 text-left font-semibold">Rates</th>
+                    <th className="px-3 py-2 text-right font-semibold">Fee</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-blue-200 dark:divide-blue-800">
+                  {EWALLET_BRACKETS.map((bracket) => (
+                    <tr
+                      key={bracket.value}
+                      className={
+                        bracket.value === activeBracketValue
+                          ? "bg-blue-200/70 font-semibold dark:bg-blue-800/60"
+                          : ""
+                      }
+                    >
+                      <td className="px-3 py-2">{bracket.label}</td>
+                      <td className="px-3 py-2 text-right">
+                        P{bracket.fee.toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Reference Number */}
@@ -301,12 +333,16 @@ export const EWalletForm: React.FC = () => {
               placeholder="0.00"
               step="0.01"
               min="0"
+              max="10000"
               disabled={isLoading}
               className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all"
               required
             />
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
               Service Charge (tiered): ₱{serviceCharge.toFixed(2)}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Supported amount range: P1 to P10,000
             </p>
           </div>
 
